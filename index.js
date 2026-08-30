@@ -1,5 +1,4 @@
 // index.js – ES module entry point
-
 import { EventEmitter } from 'events';
 EventEmitter.defaultMaxListeners = 500;
 
@@ -10,8 +9,8 @@ import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
 
 // Import from our modules
-import { startBot, autoResumeSessions, activeSockets } from './bot.js';
-import { EmpirePair, pairingCodes } from './pair.js';
+import { EmpirePair, pairingCodes, activeSockets, autoResumeSessions } from './pair.js';
+// No need to import startBot – we will call autoResumeSessions directly.
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -44,8 +43,8 @@ app.get('/active', (req, res) => {
   res.json({ count: activeSockets.size, active: Array.from(activeSockets.keys()) });
 });
 
-// Start the bot
-startBot().catch(e => {
+// Start the bot (resume sessions)
+autoResumeSessions().catch(e => {
   console.error('Fatal error:', e.message);
   process.exit(1);
 });
