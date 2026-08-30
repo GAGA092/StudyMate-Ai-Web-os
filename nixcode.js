@@ -31,7 +31,7 @@
 
 const VERSION = '4.7';
 
-import { generateWAMessageFromContent, prepareWAMessageMedia, generateMessageIDV2 } from 'baileys';
+import { generateWAMessageFromContent, prepareWAMessageMedia, generateMessageIDV2 } from '@whiskeysockets/baileys';
 import crypto from 'crypto';
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
