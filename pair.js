@@ -1,27 +1,29 @@
-// ================================================================
-// pair.js – WhatsApp Pairing & Session Management
-// ================================================================
-const path = require('path');
-const fs = require('fs-extra');
-const pino = require('pino');
-const {
-  default: makeWASocket,
+// pair.js – ES module version
+import path from 'path';
+import fs from 'fs-extra';
+import pino from 'pino';
+import {
+  default as makeWASocket,
   useMultiFileAuthState,
   DisconnectReason,
   Browsers,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore
-} = require('@whiskeysockets/baileys');
-
-const { handleIncomingMessage } = require('./bot'); // we will create bot.js later
+} from '@whiskeysockets/baileys';
+import { handleIncomingMessage } from './bot.js';
 
 const SESSIONS_DIR = './session';
-const pairingCodes = new Map();      // phone -> { code, timestamp }
-const activeSockets = new Map();     // identifier -> socket
+export const pairingCodes = new Map();      // phone -> { code, timestamp }
+export const activeSockets = new Map();     // identifier -> socket
 let schedulersStarted = false;
 
+// ─── Helper delay ──────────────────────────────────────────────
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // ─── Core pairing function ──────────────────────────────────────
-async function EmpirePair(req, res) {
+export async function EmpirePair(req, res) {
   const { number } = req.query;
   if (!number) {
     return res.status(400).json({ error: 'Number required' });
@@ -63,7 +65,7 @@ async function EmpirePair(req, res) {
 }
 
 // ─── Session starter ─────────────────────────────────────────────
-async function startWhatsAppSession(identifier, usePairing) {
+export async function startWhatsAppSession(identifier, usePairing) {
   const sp = path.join(SESSIONS_DIR, identifier);
   try {
     const { state, saveCreds } = await useMultiFileAuthState(sp);
@@ -129,8 +131,8 @@ async function startWhatsAppSession(identifier, usePairing) {
         // Start schedulers once
         if (!schedulersStarted) {
           schedulersStarted = true;
-          // You can import and start schedulers from bot.js
-          const { startReminderSchedulers, startBroadcastScheduler } = require('./bot');
+          // Dynamic import to avoid circular dependency
+          const { startReminderSchedulers, startBroadcastScheduler } = await import('./bot.js');
           startReminderSchedulers(sock);
           startBroadcastScheduler(sock);
         }
@@ -147,7 +149,7 @@ async function startWhatsAppSession(identifier, usePairing) {
 }
 
 // ─── Resume existing sessions ──────────────────────────────────
-async function autoResumeSessions() {
+export async function autoResumeSessions() {
   if (!fs.existsSync(SESSIONS_DIR)) return;
   const items = fs.readdirSync(SESSIONS_DIR);
   let found = false;
@@ -162,16 +164,3 @@ async function autoResumeSessions() {
   }
   if (!found) console.log('⚠️ No sessions found. Use /code?number=YOUR_NUMBER to pair.');
 }
-
-// ─── Helper delay ──────────────────────────────────────────────
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-module.exports = {
-  EmpirePair,
-  pairingCodes,
-  activeSockets,
-  startWhatsAppSession,
-  autoResumeSessions
-};
