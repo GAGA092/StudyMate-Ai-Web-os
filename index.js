@@ -1,26 +1,29 @@
-// ================================================================
-// index.js – StudyMate AI Bot & Web Server
-// ================================================================
-require('events').EventEmitter.defaultMaxListeners = 500;
+// index.js – ES module entry point
 
-const express = require('express');
-const bodyParser = require('body-parser');
-const path = require('path');
-const fs = require('fs-extra');
+import { EventEmitter } from 'events';
+EventEmitter.defaultMaxListeners = 500;
 
-// ─── Import modules ──────────────────────────────────────────────
-const { makeid } = require('./id');
-const { sms, downloadMediaMessage } = require('./msg');
-const { EmpirePair, pairingCodes, activeSockets, startWhatsAppSession, autoResumeSessions } = require('./pair');
+import express from 'express';
+import bodyParser from 'body-parser';
+import path from 'path';
+import fs from 'fs-extra';
+import { fileURLToPath } from 'url';
 
-// ─── Constants ────────────────────────────────────────────────────
+// Import from our modules
+import { startBot, autoResumeSessions, activeSockets } from './bot.js';
+import { EmpirePair, pairingCodes } from './pair.js';
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Constants
 const PORT = process.env.PORT || 3000;
 const SESSIONS_DIR = './session';
 const DATA_DIR = './data';
 if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-// ─── Express app ─────────────────────────────────────────────────
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -41,23 +44,15 @@ app.get('/active', (req, res) => {
   res.json({ count: activeSockets.size, active: Array.from(activeSockets.keys()) });
 });
 
-// ─── Start the bot ───────────────────────────────────────────────
-async function startBot() {
-  console.log('🚀 Starting StudyMate AI v5.0...');
-  await autoResumeSessions();
-  // The WhatsApp message handlers are attached inside the session logic in pair.js
-  // Schedulers are started inside the connection 'open' event.
-}
-
+// Start the bot
 startBot().catch(e => {
   console.error('Fatal error:', e.message);
   process.exit(1);
 });
 
-// ─── Server listen ──────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`\n✅ Server running on http://localhost:${PORT}`);
   console.log(`🔗 Pair: http://localhost:${PORT}/code?number=YOUR_NUMBER\n`);
 });
 
-module.exports = app;
+export default app;
