@@ -1,4 +1,4 @@
-// pair.js – ES module version
+// pair.js – ES module version (imports from bot.js default export)
 import path from 'path';
 import fs from 'fs-extra';
 import pino from 'pino';
@@ -10,7 +10,7 @@ import {
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore
 } from '@whiskeysockets/baileys';
-import { handleIncomingMessage } from './bot.js';
+import botModule from './bot.js';   // Import the default object
 
 const SESSIONS_DIR = './session';
 export const pairingCodes = new Map();      // phone -> { code, timestamp }
@@ -82,11 +82,11 @@ export async function startWhatsAppSession(identifier, usePairing) {
     });
     activeSockets.set(identifier, sock);
 
-    // Attach message handler
+    // Attach message handler – use botModule.default.handleIncomingMessage
     sock.ev.on('messages.upsert', async ({ messages }) => {
       for (const m of messages) {
         try {
-          await handleIncomingMessage(sock, m);
+          await botModule.handleIncomingMessage(sock, m);
         } catch (e) {
           console.error(`[MSG ERROR] ${identifier}:`, e.message);
         }
@@ -128,13 +128,12 @@ export async function startWhatsAppSession(identifier, usePairing) {
         await sock.sendMessage(userJid, {
           text: `✅ *StudyMate AI connected!*\n\nSend *start* to register and begin.\n\nDeveloper: +263716857999`
         });
-        // Start schedulers once
+        // Start schedulers once – extract from botModule
         if (!schedulersStarted) {
           schedulersStarted = true;
-          // Dynamic import to avoid circular dependency
-          const { startReminderSchedulers, startBroadcastScheduler } = await import('./bot.js');
-          startReminderSchedulers(sock);
-          startBroadcastScheduler(sock);
+          const { startReminderSchedulers, startBroadcastScheduler } = botModule;
+          if (startReminderSchedulers) startReminderSchedulers(sock);
+          if (startBroadcastScheduler) startBroadcastScheduler(sock);
         }
       }
     });
@@ -163,4 +162,4 @@ export async function autoResumeSessions() {
     startWhatsAppSession(name, false);
   }
   if (!found) console.log('⚠️ No sessions found. Use /code?number=YOUR_NUMBER to pair.');
-}
+                                 }
