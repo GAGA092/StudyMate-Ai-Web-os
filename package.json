@@ -22,7 +22,9 @@
     "pdf-parse": "^1.1.1",
     "pdfkit": "^0.13.0",
     "@supabase/supabase-js": "^2.39.0",
-    "openai": "^4.0.0"
+    "openai": "^4.0.0",
+    "sharp": "^0.32.0",
+    "fluent-ffmpeg": "^2.1.2",
   },
   "devDependencies": {
     "nodemon": "^3.0.0"
