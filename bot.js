@@ -14,7 +14,6 @@ import OpenAI from 'openai';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import fsExtra from 'fs-extra';
 import path from 'path';
-import os from 'os';
 import pino from 'pino';
 import crypto from 'crypto';
 import stream from 'stream';
