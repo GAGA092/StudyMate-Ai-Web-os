@@ -1,282 +1,656 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyMate AI – Pair & Docs</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-      background: #0a0a1a;
-      color: #eee;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>StudyMate AI — Smart WhatsApp Learning Assistant</title>
+<meta name="description" content="StudyMate AI — an intelligent WhatsApp-based educational assistant for St Mary's High School.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root {
+    --bg: #06070d;
+    --bg-elevated: #0d0f1a;
+    --surface: #12141f;
+    --surface-2: #171a28;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,215,0,0.35);
+    --gold: #ffd700;
+    --gold-dim: #b8960a;
+    --purple: #8a2be2;
+    --blue: #4f8cff;
+    --text: #f2f3f7;
+    --text-dim: #9799ab;
+    --text-faint: #5c5f72;
+    --success: #34d399;
+    --error: #f87171;
+    --radius: 18px;
+    --radius-sm: 12px;
+    --shadow-lg: 0 20px 60px rgba(0,0,0,0.55);
+    --shadow-glow: 0 0 40px rgba(255,215,0,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  .bg-glow {
+    position: fixed; inset: 0; z-index: -2;
+    background:
+      radial-gradient(ellipse 800px 500px at 15% -5%, rgba(255,215,0,0.09), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 90% 10%, rgba(138,43,226,0.12), transparent 55%),
+      radial-gradient(ellipse 900px 600px at 50% 110%, rgba(79,140,255,0.08), transparent 60%),
+      var(--bg);
+  }
+  .bg-grid {
+    position: fixed; inset: 0; z-index: -1;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 20%, black 30%, transparent 90%);
+  }
+
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(6,7,13,0.72);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border-bottom: 1px solid var(--border);
+    padding: 0.9rem 1.5rem;
+  }
+  .header-inner {
+    max-width: 1180px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .logo { display: flex; align-items: center; gap: 0.7rem; }
+  .logo img {
+    height: 38px; width: 38px; border-radius: 10px; object-fit: cover;
+    box-shadow: 0 0 0 1px var(--border), 0 4px 14px rgba(0,0,0,0.4);
+  }
+  .logo-text { display: flex; flex-direction: column; line-height: 1.1; }
+  .logo-text b { font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
+  .logo-text span { font-size: 0.68rem; color: var(--text-faint); font-weight: 500; }
+
+  nav { display: flex; align-items: center; gap: 0.3rem; }
+  nav a {
+    color: var(--text-dim); text-decoration: none; font-size: 0.88rem; font-weight: 600;
+    padding: 0.5rem 0.9rem; border-radius: 999px; transition: all 0.2s ease; cursor: pointer;
+  }
+  nav a:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  nav a.active { color: #0a0a0a; background: var(--gold); }
+
+  .mobile-toggle { display: none; background: none; border: none; color: var(--text); font-size: 1.3rem; cursor: pointer; }
+
+  .container { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem; }
+  .page { display: none; animation: fadeUp 0.5s ease both; }
+  .page.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+  .hero { padding: 4.5rem 0 3rem; text-align: center; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 0.4rem 0.9rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+    color: var(--gold); margin-bottom: 1.5rem;
+  }
+  .hero-badge .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--success);
+    box-shadow: 0 0 8px var(--success); animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .hero h1 {
+    font-family: 'Space Grotesk', sans-serif; font-size: clamp(2rem, 5.5vw, 3.4rem);
+    font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 1rem;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(120deg, var(--gold), #ffe98a 45%, var(--purple));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p { max-width: 560px; margin: 0 auto; color: var(--text-dim); font-size: 1.05rem; line-height: 1.6; }
+
+  .stats-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--border); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; margin: 2.5rem 0;
+  }
+  .stat { background: var(--surface); padding: 1.4rem 1rem; text-align: center; }
+  .stat b { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; color: var(--gold); }
+  .stat span { font-size: 0.75rem; color: var(--text-faint); font-weight: 500; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 2rem; box-shadow: var(--shadow-lg); margin-bottom: 1.75rem;
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,215,0,0.5), transparent);
+  }
+  .card h2 {
+    font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; font-weight: 600;
+    margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.6rem;
+  }
+  .card h2 i { color: var(--gold); font-size: 1.1rem; }
+  .card .sub { color: var(--text-faint); font-size: 0.88rem; margin-bottom: 1.5rem; }
+
+  .method-tabs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 1.6rem;
+    background: var(--bg-elevated); padding: 0.35rem; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  }
+  .method-tab {
+    background: transparent; border: none; color: var(--text-dim);
+    padding: 0.7rem 1rem; border-radius: 9px; font-weight: 600; font-size: 0.88rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.25s ease;
+  }
+  .method-tab.active {
+    background: linear-gradient(135deg, var(--gold), #e0b800); color: #0a0a0a;
+    box-shadow: 0 4px 14px rgba(255,215,0,0.25);
+  }
+  .method-tab:not(.active):hover { color: var(--text); background: rgba(255,255,255,0.04); }
+
+  .field-label { font-size: 0.82rem; color: var(--text-dim); font-weight: 600; margin-bottom: 0.55rem; display: block; }
+  .input-container {
+    display: flex; background: var(--bg-elevated); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden; transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .input-container:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255,215,0,0.1); }
+  .input-container .prefix {
+    display: flex; align-items: center; padding: 0 0.9rem; color: var(--text-faint);
+    font-size: 0.95rem; border-right: 1px solid var(--border);
+  }
+  .input-container input {
+    flex: 1; background: transparent; border: none; padding: 0.95rem 1rem;
+    color: var(--text); font-size: 1rem; font-family: 'Inter', sans-serif; min-width: 0;
+  }
+  .input-container input:focus { outline: none; }
+  .input-container input::placeholder { color: var(--text-faint); }
+  .input-container button {
+    padding: 0 1.6rem; background: linear-gradient(135deg, var(--gold), #e0b800);
+    color: #0a0a0a; border: none; cursor: pointer; font-weight: 700; font-size: 0.92rem;
+    white-space: nowrap; transition: filter 0.2s ease, transform 0.15s ease;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .input-container button:hover { filter: brightness(1.08); }
+  .input-container button:active { transform: scale(0.97); }
+  .input-container button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .hint { font-size: 0.78rem; color: var(--text-faint); margin-top: 0.6rem; display: flex; align-items: center; gap: 0.4rem; }
+
+  .result-box { margin-top: 1.6rem; }
+  .code-display {
+    font-family: 'Space Grotesk', monospace; font-size: clamp(1.7rem, 6vw, 2.6rem);
+    font-weight: 700; letter-spacing: 0.08em;
+    background: linear-gradient(180deg, var(--bg-elevated), var(--surface-2));
+    border: 1.5px solid var(--border-hover); padding: 1.6rem 1rem; border-radius: var(--radius-sm);
+    color: var(--gold); text-align: center;
+    box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255,255,255,0.04);
+    animation: popIn 0.4s ease; word-break: break-all;
+  }
+  @keyframes popIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+  .code-meta {
+    display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+    margin-top: 0.9rem; font-size: 0.85rem; color: var(--text-dim); text-align: center;
+  }
+  .copy-btn {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
+    padding: 0.35rem 0.7rem; border-radius: 8px; font-size: 0.78rem; cursor: pointer; transition: all 0.2s;
+  }
+  .copy-btn:hover { color: var(--gold); border-color: var(--border-hover); }
+
+  .qr-frame {
+    display: flex; justify-content: center; padding: 1rem;
+    background: linear-gradient(180deg, var(--bg-elevated), var(--surface-2));
+    border: 1.5px solid var(--border-hover); border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-glow); animation: popIn 0.4s ease;
+  }
+  .qr-img { max-width: 280px; width: 100%; border-radius: 10px; background: #fff; padding: 12px; }
+
+  .status-msg {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.9rem 1.1rem;
+    border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 500;
+  }
+  .status-msg.loading { background: rgba(79,140,255,0.08); color: #8ab4ff; border: 1px solid rgba(79,140,255,0.25); }
+  .status-msg.error { background: rgba(248,113,113,0.08); color: #ff9c9c; border: 1px solid rgba(248,113,113,0.25); }
+  .status-msg.success { background: rgba(52,211,153,0.08); color: #6ee7b6; border: 1px solid rgba(52,211,153,0.25); }
+  .spinner {
+    width: 15px; height: 15px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.2); border-top-color: currentColor;
+    animation: spin 0.7s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 0.5rem; }
+  .step { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.1rem; }
+  .step-num {
+    width: 26px; height: 26px; border-radius: 50%; background: rgba(255,215,0,0.12); color: var(--gold);
+    display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; margin-bottom: 0.7rem;
+  }
+  .step p { font-size: 0.83rem; color: var(--text-dim); line-height: 1.5; }
+  .step b { color: var(--text); }
+
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-top: 1rem; }
+  .feature {
+    background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 1.3rem; transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+  .feature:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+  .feature i { color: var(--gold); font-size: 1.25rem; margin-bottom: 0.7rem; display: block; }
+  .feature h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.35rem; }
+  .feature p { font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; }
+
+  .cmd-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .cmd-row {
+    display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1rem;
+    background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; flex-wrap: wrap;
+  }
+  .cmd-row code {
+    background: var(--surface-2); color: var(--gold); padding: 0.3rem 0.6rem; border-radius: 6px;
+    font-size: 0.82rem; font-family: 'Space Grotesk', monospace; white-space: nowrap;
+  }
+  .cmd-row span { color: var(--text-dim); font-size: 0.85rem; }
+
+  .about-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+  .about-item { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.1rem; }
+  .about-item .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); font-weight: 700; margin-bottom: 0.4rem; }
+  .about-item .value { font-size: 0.95rem; font-weight: 600; }
+  .about-item .value a { color: var(--gold); text-decoration: none; }
+  .about-item .value a:hover { text-decoration: underline; }
+
+  .health-strip {
+    display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; color: var(--text-dim);
+    margin-top: 1rem; padding: 0.7rem 1rem; background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+  }
+  .health-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-faint); flex-shrink: 0; }
+  .health-dot.ok { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .health-dot.bad { background: var(--error); box-shadow: 0 0 6px var(--error); }
+
+  footer {
+    text-align: center; padding: 2.5rem 1.5rem 3rem; color: var(--text-faint);
+    font-size: 0.82rem; border-top: 1px solid var(--border); margin-top: 3rem;
+  }
+  footer .socials { display: flex; justify-content: center; gap: 0.8rem; margin-bottom: 1rem; }
+  footer .socials a {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; color: var(--text-dim);
+    text-decoration: none; transition: all 0.2s;
+  }
+  footer .socials a:hover { color: var(--gold); border-color: var(--border-hover); transform: translateY(-2px); }
+
+  @media (max-width: 720px) {
+    .stats-strip { grid-template-columns: repeat(2, 1fr); }
+    .steps { grid-template-columns: 1fr; }
+    nav {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      background: var(--bg-elevated); flex-direction: column; padding: 0.8rem;
+      border-bottom: 1px solid var(--border); gap: 0.3rem;
     }
-    header {
-      background: #16213e;
-      padding: 1rem 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 2px solid #ffd700;
-      flex-wrap: wrap;
-    }
-    header .logo { display: flex; align-items: center; gap: 1rem; }
-    header .logo img { height: 50px; border-radius: 50%; }
-    header .logo h1 { font-size: 1.8rem; color: #ffd700; }
-    nav a {
-      color: #ccc;
-      text-decoration: none;
-      margin: 0 1rem;
-      font-weight: 500;
-      cursor: pointer;
-      padding: 0.5rem;
-    }
-    nav a:hover, nav a.active { color: #ffd700; border-bottom: 2px solid #ffd700; }
-    .container { flex: 1; max-width: 1000px; margin: 2rem auto; padding: 0 1.5rem; width: 100%; }
-    .page { display: none; }
-    .page.active { display: block; }
-    .card {
-      background: #16213e;
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      margin-bottom: 2rem;
-    }
-    .card h2 { color: #ffd700; margin-bottom: 1rem; border-bottom: 1px solid #ffd70033; padding-bottom: 0.5rem; }
-    .btn {
-      display: inline-block;
-      background: #ffd700;
-      color: #000;
-      padding: 0.6rem 1.5rem;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: bold;
-      border: none;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    .btn:hover { background: #e6c200; }
-    .input-container {
-      display: flex;
-      background: rgba(0,0,0,0.2);
-      border-radius: 12px;
-      padding: 4px;
-      gap: 4px;
-      width: 100%;
-      margin: 1rem 0;
-      border: 1px solid #333;
-    }
-    .input-container input {
-      background: rgba(0,0,0,0.3);
-      width: 100%;
-      padding: 15px;
-      border: none;
-      border-radius: 8px 0 0 8px;
-      color: white;
-      font-size: 16px;
-    }
-    .input-container input:focus { outline: none; background: rgba(0,0,0,0.4); }
-    .input-container button {
-      padding: 15px 25px;
-      background: linear-gradient(135deg, #8a2be2, #6a11cb);
-      color: white;
-      border: none;
-      border-radius: 0 8px 8px 0;
-      cursor: pointer;
-      font-weight: bold;
-      transition: 0.3s;
-    }
-    .input-container button:hover { background: linear-gradient(135deg, #ff2a6d, #6a11cb); }
-    .code-display {
-      font-family: monospace;
-      font-size: 2.5rem;
-      background: #0f3460;
-      padding: 1rem;
-      border-radius: 8px;
-      color: #ffd700;
-      text-align: center;
-      margin: 1rem 0;
-    }
-    .qr-img { display: block; margin: 0 auto; max-width: 300px; border-radius: 8px; }
-    .status { margin: 1rem 0; }
-    .tab-content { margin-top: 1rem; }
-    .footer { text-align: center; padding: 1.5rem; color: #666; border-top: 1px solid #222; margin-top: 2rem; }
-    .badge { background: #ffd700; color: #000; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.8rem; }
-    .error { color: #ff2a6d; }
-    .success { color: #4caf50; }
-  </style>
+    nav.open { display: flex; }
+    nav a { width: 100%; text-align: left; }
+    .mobile-toggle { display: block; }
+    .card { padding: 1.4rem; }
+    .input-container { flex-direction: column; }
+    .input-container .prefix { border-right: none; border-bottom: 1px solid var(--border); padding: 0.7rem 1rem; }
+    .input-container button { padding: 0.9rem; justify-content: center; }
+  }
+  @media (max-width: 480px) {
+    .stats-strip { grid-template-columns: repeat(2, 1fr); }
+    .hero { padding: 3rem 0 2rem; }
+  }
+</style>
 </head>
 <body>
+
+<div class="bg-glow"></div>
+<div class="bg-grid"></div>
+
 <header>
-  <div class="logo">
-    <img src="https://traxxion-nebula-flow.lovable.app/23an2vxc.png" alt="Logo">
-    <h1>StudyMate AI</h1>
+  <div class="header-inner">
+    <div class="logo">
+      <img src="https://traxxion-nebula-flow.lovable.app/23an2vxc.png" alt="StudyMate AI logo">
+      <div class="logo-text">
+        <b>StudyMate AI</b>
+        <span>St Mary's High School</span>
+      </div>
+    </div>
+    <button class="mobile-toggle" id="mobileToggle" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+    <nav id="navMenu">
+      <a class="active" data-tab="home">Pair Device</a>
+      <a data-tab="docs">Documentation</a>
+      <a data-tab="about">About</a>
+    </nav>
   </div>
-  <nav>
-    <a class="active" data-tab="home">Home</a>
-    <a data-tab="docs">Docs</a>
-    <a data-tab="about">About</a>
-  </nav>
 </header>
+
 <div class="container">
+
+  <!-- HOME / PAIR -->
   <div id="home" class="page active">
+    <div class="hero">
+      <div class="hero-badge"><span class="dot"></span> Live &amp; Ready to Connect</div>
+      <h1>Link your <span class="grad">WhatsApp</span><br>to StudyMate AI</h1>
+      <p>An AI-powered educational assistant built for St Mary's High School — quizzes, study help, live tracking, and full school management, all inside WhatsApp.</p>
+    </div>
+
+    <div class="stats-strip">
+      <div class="stat"><b>280+</b><span>Commands</span></div>
+      <div class="stat"><b>2</b><span>Languages</span></div>
+      <div class="stat"><b>24/7</b><span>Availability</span></div>
+      <div class="stat"><b>v5.1</b><span>Current Build</span></div>
+    </div>
+
     <div class="card">
-      <h2>🔗 Link WhatsApp</h2>
-      <p style="margin-bottom:1rem;">Choose your pairing method:</p>
-      <div style="display:flex; gap:1rem; margin-bottom:1rem;">
-        <button class="btn" id="pairMethodPhone" style="background:#333; color:#fff;">📱 Phone Number</button>
-        <button class="btn" id="pairMethodQR" style="background:#333; color:#fff;">📷 QR Code</button>
+      <h2><i class="fa-solid fa-link"></i> Connect Your Device</h2>
+      <p class="sub">Choose how you'd like to link WhatsApp to the bot.</p>
+
+      <div class="method-tabs">
+        <button class="method-tab active" id="pairMethodPhone">
+          <i class="fa-solid fa-hashtag"></i> Pairing Code
+        </button>
+        <button class="method-tab" id="pairMethodQR">
+          <i class="fa-solid fa-qrcode"></i> QR Scan
+        </button>
       </div>
+
+      <!-- Phone / Code method -->
       <div id="pairPhone">
-        <p>Enter your WhatsApp number (with country code):</p>
+        <label class="field-label">WhatsApp number (with country code)</label>
         <div class="input-container">
-          <input placeholder="+263712345678" type="tel" id="number">
-          <button id="submitPhone">Get Code</button>
+          <span class="prefix"><i class="fa-solid fa-phone"></i></span>
+          <input placeholder="263712345678" type="tel" id="number" inputmode="numeric" autocomplete="tel">
+          <button id="submitPhone"><i class="fa-solid fa-arrow-right"></i> Get Code</button>
         </div>
-        <div id="phoneResult"></div>
+        <div class="hint"><i class="fa-solid fa-circle-info"></i> No spaces, dashes, or the "+" symbol needed.</div>
+        <div id="phoneResult" class="result-box"></div>
       </div>
+
+      <!-- QR method — no number needed -->
       <div id="pairQR" style="display:none;">
-        <p>Enter your WhatsApp number to generate QR code:</p>
-        <div class="input-container">
-          <input placeholder="+263712345678" type="tel" id="numberQR">
-          <button id="submitQR">Get QR</button>
+        <p class="hint" style="margin-bottom:1rem;"><i class="fa-solid fa-circle-info"></i> No number needed — just scan with WhatsApp.</p>
+        <button id="submitQR" class="input-container" style="justify-content:center; padding:0.95rem; cursor:pointer; border:none; background:linear-gradient(135deg, var(--gold), #e0b800); color:#0a0a0a; font-weight:700; border-radius:var(--radius-sm); width:100%;">
+          <i class="fa-solid fa-qrcode"></i>&nbsp; Generate QR Code
+        </button>
+        <div id="qrResult" class="result-box"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fa-solid fa-list-check"></i> How to Link</h2>
+      <p class="sub">Follow these steps on your phone once you have your code or QR.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <p>Open <b>WhatsApp</b> → tap <b>Settings</b> → <b>Linked Devices</b> → <b>Link a Device</b>.</p>
         </div>
-        <div id="qrResult"></div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <p>Choose <b>"Link with phone number instead"</b> for a code, or scan directly for QR.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <p>Enter the code shown above, or point your camera at the QR. You'll get a welcome message once connected.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fa-solid fa-flask"></i> System Status</h2>
+      <p class="sub">Live check of the AI and image-generation services behind Lab Experiments.</p>
+      <div class="health-strip" id="labHealthStrip">
+        <span class="health-dot" id="labHealthDot"></span>
+        <span id="labHealthText">Checking lab systems…</span>
       </div>
     </div>
   </div>
+
+  <!-- DOCS -->
   <div id="docs" class="page">
+    <div class="hero" style="padding-top:3rem;">
+      <h1 style="font-size:clamp(1.7rem,4vw,2.4rem);">Documentation</h1>
+      <p>Everything you need to know to use StudyMate AI on WhatsApp.</p>
+    </div>
+
     <div class="card">
-      <h2>📖 Documentation</h2>
-      <h3>Commands</h3>
-      <ul>
-        <li><code>study maths</code> – AI help for any subject</li>
-        <li><code>quiz</code> – Start a quiz</li>
-        <li><code>image gen cat (2)</code> – Generate AI images</li>
-        <li><code>weather Harare</code> – Weather forecast</li>
-        <li><code>profile</code> – Your points and rank</li>
-        <li><code>leaderboard</code> – Top students</li>
-        <li><code>absence reason sick - I have fever</code> – Report absence</li>
-        <li><code>where is my child</code> – Live location (parents)</li>
-        <li><code>admin dashboard</code> – Admin panel</li>
-        <li><code>.dev</code> – Developer panel (dev only)</li>
-        <li><code>lab experiment description</code> – Virtual lab simulation</li>
-      </ul>
-      <h3>Registration</h3>
-      <p>Type <code>start</code> on WhatsApp to begin registration.</p>
-      <h3>Support</h3>
-      <p>Contact: <a href="https://wa.me/263716857999" style="color:#ffd700;">+263716857999</a></p>
+      <h2><i class="fa-solid fa-terminal"></i> Popular Commands</h2>
+      <p class="sub">Type these directly in chat with the bot.</p>
+      <div class="cmd-list">
+        <div class="cmd-row"><code>start</code><span>Begin registration</span></div>
+        <div class="cmd-row"><code>study maths</code><span>AI help for any subject</span></div>
+        <div class="cmd-row"><code>quiz</code><span>Start an anti-cheat quiz</span></div>
+        <div class="cmd-row"><code>image gen cat (2)</code><span>Generate AI images</span></div>
+        <div class="cmd-row"><code>weather Harare</code><span>Weather forecast &amp; advice</span></div>
+        <div class="cmd-row"><code>profile</code><span>View your points and rank</span></div>
+        <div class="cmd-row"><code>leaderboard</code><span>Top students, all-time</span></div>
+        <div class="cmd-row"><code>absence reason sick - fever</code><span>Report an absence</span></div>
+        <div class="cmd-row"><code>where is my child</code><span>Live location (parents)</span></div>
+        <div class="cmd-row"><code>admin dashboard</code><span>Admin control panel</span></div>
+        <div class="cmd-row"><code>lab titration experiment</code><span>Virtual lab simulation</span></div>
+        <div class="cmd-row"><code>menu</code><span>Full interactive menu</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fa-solid fa-users"></i> Roles</h2>
+      <div class="feature-grid">
+        <div class="feature"><i class="fa-solid fa-user-graduate"></i><h3>Students</h3><p>Study tools, quizzes, assignments, absence reporting, results.</p></div>
+        <div class="feature"><i class="fa-solid fa-people-roof"></i><h3>Parents</h3><p>Link children, track progress, live location, medical info.</p></div>
+        <div class="feature"><i class="fa-solid fa-chalkboard-user"></i><h3>Teachers</h3><p>Class dashboards, assignments, absence approvals, timetables.</p></div>
+        <div class="feature"><i class="fa-solid fa-user-shield"></i><h3>Admins</h3><p>Full system control — broadcasts, classes, analytics, exports.</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fa-solid fa-headset"></i> Support</h2>
+      <p class="sub">Need help? Reach the developer directly.</p>
+      <a href="https://wa.me/263716857999" target="_blank" style="color:var(--gold); text-decoration:none; font-weight:600;">
+        <i class="fa-brands fa-whatsapp"></i> +263 716 857 999
+      </a>
     </div>
   </div>
+
+  <!-- ABOUT -->
   <div id="about" class="page">
+    <div class="hero" style="padding-top:3rem;">
+      <h1 style="font-size:clamp(1.7rem,4vw,2.4rem);">About StudyMate AI</h1>
+      <p>An AI-powered educational assistant built to enhance learning and school management through intelligent automation.</p>
+    </div>
+
     <div class="card">
-      <h2>ℹ️ About StudyMate AI</h2>
-      <p><strong>Version:</strong> 5.1.0 – Premium Developer Edition</p>
-      <p><strong>School:</strong> St Mary's High</p>
-      <p><strong>Developer:</strong> Vincent Ganiza</p>
-      <p><strong>WhatsApp:</strong> <a href="https://wa.me/263716857999" style="color:#ffd700;">+263716857999</a></p>
-      <p><strong>Email:</strong> traxxiontech@gmail.com</p>
-      <p><strong>Country:</strong> Zimbabwe 🇿🇼</p>
-      <p><strong>Tech Stack:</strong> Node.js, Baileys, Express, NIXCODE Buttons, Supabase, OpenAI</p>
-      <p><strong>Description:</strong> AI-powered educational assistant for school management and learning.</p>
+      <div class="about-grid">
+        <div class="about-item"><div class="label">Version</div><div class="value">5.1.0</div></div>
+        <div class="about-item"><div class="label">School</div><div class="value">St Mary's High</div></div>
+        <div class="about-item"><div class="label">Developer</div><div class="value">Vincent Ganiza</div></div>
+        <div class="about-item"><div class="label">Country</div><div class="value">🇿🇼 Zimbabwe</div></div>
+        <div class="about-item"><div class="label">WhatsApp</div><div class="value"><a href="https://wa.me/263716857999" target="_blank">+263 716 857 999</a></div></div>
+        <div class="about-item"><div class="label">Email</div><div class="value"><a href="mailto:traxxiontech@gmail.com">traxxiontech@gmail.com</a></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fa-solid fa-layer-group"></i> Tech Stack</h2>
+      <div class="feature-grid">
+        <div class="feature"><i class="fa-brands fa-node-js"></i><h3>Node.js</h3><p>Core runtime powering the bot server.</p></div>
+        <div class="feature"><i class="fa-brands fa-whatsapp"></i><h3>Baileys</h3><p>WhatsApp Web multi-device protocol library.</p></div>
+        <div class="feature"><i class="fa-solid fa-server"></i><h3>Express</h3><p>Web server for pairing and health endpoints.</p></div>
+        <div class="feature"><i class="fa-solid fa-database"></i><h3>Supabase</h3><p>Cloud data storage with local fallback.</p></div>
+        <div class="feature"><i class="fa-solid fa-brain"></i><h3>OpenAI</h3><p>AI tutoring, quiz generation, and vision.</p></div>
+        <div class="feature"><i class="fa-solid fa-hand-pointer"></i><h3>NIXCODE UI</h3><p>Rich interactive WhatsApp buttons &amp; menus.</p></div>
+      </div>
     </div>
   </div>
-</div>
-<div class="footer">
-  &copy; 2026 StudyMate AI – Vincent Ganiza | St Mary's High
+
 </div>
 
+<footer>
+  <div class="socials">
+    <a href="https://wa.me/263716857999" target="_blank" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+    <a href="mailto:traxxiontech@gmail.com" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
+  </div>
+  &copy; 2026 StudyMate AI — Vincent Ganiza · Traxxion Tech · St Mary's High
+</footer>
+
 <script>
-  // Tab switching
-  document.querySelectorAll('nav a').forEach(link => {
+  // ─── Tab switching ─────────────────────────────────────────
+  const navLinks = document.querySelectorAll('nav a');
+  const pages = document.querySelectorAll('.page');
+  navLinks.forEach(link => {
     link.addEventListener('click', function(e) {
       e.preventDefault();
-      document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+      navLinks.forEach(a => a.classList.remove('active'));
       this.classList.add('active');
       const tab = this.dataset.tab;
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      pages.forEach(p => p.classList.remove('active'));
       document.getElementById(tab).classList.add('active');
+      document.getElementById('navMenu').classList.remove('open');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
 
-  // Pairing method toggle
-  document.getElementById('pairMethodPhone').addEventListener('click', function() {
-    document.getElementById('pairPhone').style.display = 'block';
-    document.getElementById('pairQR').style.display = 'none';
-    document.getElementById('phoneResult').innerHTML = '';
-  });
-  document.getElementById('pairMethodQR').addEventListener('click', function() {
-    document.getElementById('pairPhone').style.display = 'none';
-    document.getElementById('pairQR').style.display = 'block';
-    document.getElementById('qrResult').innerHTML = '';
+  // ─── Mobile menu toggle ────────────────────────────────────
+  document.getElementById('mobileToggle').addEventListener('click', () => {
+    document.getElementById('navMenu').classList.toggle('open');
   });
 
-  // Phone number pairing
+  // ─── Pairing method toggle ─────────────────────────────────
+  const btnPhone = document.getElementById('pairMethodPhone');
+  const btnQR = document.getElementById('pairMethodQR');
+  const panelPhone = document.getElementById('pairPhone');
+  const panelQR = document.getElementById('pairQR');
+
+  btnPhone.addEventListener('click', () => {
+    btnPhone.classList.add('active');
+    btnQR.classList.remove('active');
+    panelPhone.style.display = 'block';
+    panelQR.style.display = 'none';
+  });
+  btnQR.addEventListener('click', () => {
+    btnQR.classList.add('active');
+    btnPhone.classList.remove('active');
+    panelPhone.style.display = 'none';
+    panelQR.style.display = 'block';
+  });
+
+  function cleanNumber(v) { return v.replace(/[^0-9]/g, ''); }
+
+  function statusHTML(type, icon, text) {
+    const spinner = type === 'loading' ? '<span class="spinner"></span>' : `<i class="fa-solid ${icon}"></i>`;
+    return `<div class="status-msg ${type}">${spinner}<span>${text}</span></div>`;
+  }
+
+  // ─── Pairing code flow ─────────────────────────────────────
   document.getElementById('submitPhone').addEventListener('click', async function() {
+    const btn = this;
     const number = document.getElementById('number').value.trim();
     const resultDiv = document.getElementById('phoneResult');
-    if (!number) {
-      resultDiv.innerHTML = '<div class="error">Please enter a number.</div>';
+    const cleanNum = cleanNumber(number);
+
+    if (!cleanNum || cleanNum.length < 10) {
+      resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', 'Please enter a valid number with country code.');
       return;
     }
-    const cleanNum = number.replace(/[^0-9]/g, '');
-    if (cleanNum.length < 10) {
-      resultDiv.innerHTML = '<div class="error">Invalid number format.</div>';
-      return;
-    }
-    resultDiv.innerHTML = '<div>⏳ Requesting code...</div>';
+
+    btn.disabled = true;
+    resultDiv.innerHTML = statusHTML('loading', '', 'Requesting your pairing code…');
+
     try {
       const response = await fetch(`/code?number=${cleanNum}`);
       const data = await response.json();
+
       if (data.code && data.code !== 'already_connected') {
-        resultDiv.innerHTML = `<div class="code-display">${data.code}</div><p>Enter this code in WhatsApp → Linked Devices → Link with phone number.</p>`;
+        resultDiv.innerHTML = `
+          <div class="code-display" id="codeText">${data.code}</div>
+          <div class="code-meta">
+            <span><i class="fa-solid fa-clock"></i> Enter this in WhatsApp within 60 seconds</span>
+            <button class="copy-btn" id="copyBtn"><i class="fa-regular fa-copy"></i> Copy</button>
+          </div>`;
+        document.getElementById('copyBtn').addEventListener('click', () => {
+          navigator.clipboard.writeText(data.code.replace(/-/g, ''));
+          const b = document.getElementById('copyBtn');
+          b.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+          setTimeout(() => b.innerHTML = '<i class="fa-regular fa-copy"></i> Copy', 1800);
+        });
       } else if (data.code === 'already_connected') {
-        resultDiv.innerHTML = '<div class="success">✅ Already connected.</div>';
+        resultDiv.innerHTML = statusHTML('success', 'fa-circle-check', 'This number is already connected.');
       } else {
-        resultDiv.innerHTML = `<div class="error">❌ ${data.error || 'Service unavailable'}</div>`;
+        resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', data.error || 'Service unavailable. Please try again.');
       }
     } catch (e) {
-      resultDiv.innerHTML = `<div class="error">❌ Error: ${e.message}</div>`;
+      resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', 'Error: ' + e.message);
+    } finally {
+      btn.disabled = false;
     }
   });
 
-  // QR pairing
+  // ─── QR flow — no number required ───────────────────────────
   document.getElementById('submitQR').addEventListener('click', async function() {
-    const number = document.getElementById('numberQR').value.trim();
+    const btn = this;
     const resultDiv = document.getElementById('qrResult');
-    if (!number) {
-      resultDiv.innerHTML = '<div class="error">Please enter a number.</div>';
-      return;
-    }
-    const cleanNum = number.replace(/[^0-9]/g, '');
-    if (cleanNum.length < 10) {
-      resultDiv.innerHTML = '<div class="error">Invalid number format.</div>';
-      return;
-    }
-    resultDiv.innerHTML = '<div>⏳ Generating QR code...</div>';
+
+    btn.disabled = true;
+    resultDiv.innerHTML = statusHTML('loading', '', 'Generating your QR code…');
+
     try {
-      const response = await fetch(`/pair-qr?number=${cleanNum}`);
+      const response = await fetch(`/pair-qr`);
+
       if (response.status === 504) {
-        const text = await response.text();
-        resultDiv.innerHTML = `<div class="error">❌ Timeout: ${text}</div>`;
+        resultDiv.innerHTML = statusHTML('error', 'fa-clock', 'Timed out waiting for QR. Please try again.');
         return;
       }
       if (!response.ok) {
-        const text = await response.text();
-        resultDiv.innerHTML = `<div class="error">❌ ${text || 'Service unavailable'}</div>`;
+        let msg = 'Service unavailable.';
+        try { const j = await response.json(); msg = j.error || msg; } catch {}
+        resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', msg);
         return;
       }
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      resultDiv.innerHTML = `<img src="${url}" alt="QR Code" class="qr-img"><p>Scan this QR with WhatsApp → Linked Devices → Link a device.</p>`;
+      resultDiv.innerHTML = `
+        <div class="qr-frame"><img src="${url}" alt="WhatsApp QR Code" class="qr-img"></div>
+        <div class="code-meta"><span><i class="fa-solid fa-camera"></i> Scan with WhatsApp → Linked Devices → Link a Device</span></div>`;
     } catch (e) {
-      resultDiv.innerHTML = `<div class="error">❌ Error: ${e.message}</div>`;
+      resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', 'Error: ' + e.message);
+    } finally {
+      btn.disabled = false;
     }
   });
+
+  // Enter key submits (pairing code field only — QR has no text field)
+  document.getElementById('number').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('submitPhone').click(); });
+
+  // ─── Lab system status indicator ────────────────────────────
+  async function checkLabHealth() {
+    const dot = document.getElementById('labHealthDot');
+    const text = document.getElementById('labHealthText');
+    try {
+      const res = await fetch('/lab-health');
+      const data = await res.json();
+      if (data.labReady) {
+        dot.className = 'health-dot ok';
+        text.textContent = 'Lab Experiments: AI & image generation online';
+      } else {
+        dot.className = 'health-dot bad';
+        const parts = [];
+        if (!data.ai) parts.push('AI unavailable');
+        if (!data.imageGen) parts.push('image generation unavailable');
+        text.textContent = `Lab Experiments degraded — ${parts.join(', ') || 'checking…'}`;
+      }
+    } catch (e) {
+      dot.className = 'health-dot bad';
+      text.textContent = 'Could not reach lab status endpoint';
+    }
+  }
+  checkLabHealth();
 </script>
 </body>
 </html>

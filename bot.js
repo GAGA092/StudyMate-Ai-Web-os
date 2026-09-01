@@ -20,15 +20,11 @@ import crypto from 'crypto';
 import stream from 'stream';
 const pipeline = promisify(stream.pipeline);
 import {
-  default as makeWASocket,
-  useMultiFileAuthState,
-  DisconnectReason,
   downloadMediaMessage,
-  getContentType,
-  Browsers,
-  fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore
+  getContentType
 } from '@whiskeysockets/baileys';
+import os from 'os';
+import { exec as execCallback } from 'child_process';
 import { Button, ButtonV2, Carousel, AIRich, Toolkit } from './nixcode.js';
 
 // ─── Settings ────────────────────────────────────────────────────
@@ -465,14 +461,337 @@ export async function uploadToService(buffer, filename) {
 }
 
 // ─── Bilingual Dictionary ────────────────────────────────────────
-// (Full dictionary – we use the same as before, but we'll put it here)
-// For brevity, I'll include it as a variable; it's identical to previous versions.
+// (Full dictionary – we include all entries for both languages)
 export const LANG = {
-  en: { /* ... all entries ... */ },
-  sn: { /* ... all entries ... */ }
+  en: {
+    welcome: `👋 *Hello {name}!*\n\nWelcome to *${BOT_NAME}* - ${SCHOOL_NAME}.\n\nType *start* to register and begin learning!`,
+    selectLanguage: `🌍 *Select Your Language / Sarudza Mutauro*\n\n1️⃣ English\n2️⃣ Shona`,
+    languageSet: '✅ Language set to English!',
+    selectRole: '✅ *Let\'s get you registered!*\n\nWhat is your role?\n\n1️⃣ Student\n2️⃣ Parent\n3️⃣ Teacher\n4️⃣ Admin',
+    roleStudent: 'Student', roleParent: 'Parent', roleTeacher: 'Teacher', roleAdmin: 'Admin',
+    enterName: 'Please send your *full name*.',
+    enterAge: 'Now enter your *age* (must be 20 or under).',
+    invalidAge: `❌ Please enter a valid age (0 to ${MAX_AGE}).`,
+    selectForm: 'Select your *Form*:',
+    selectClass: 'Select your *Class/Stream*:',
+    invalidClass: '❌ Invalid class selected. Please select from the menu.',
+    registrationComplete: '✅ *Student registration complete!*\n\nName: {name}\nStudent ID: {studentId}\nAge: {age}\nGender: {gender}\nClass: {class}\nSchool: {school}\n\nPlease save your Student ID – your parent will need it to link their account.',
+    enterChildName: 'Please enter your *child\'s name*.',
+    enterRelationship: 'What is your relationship with {child}? (e.g., Mother, Father, Guardian)',
+    enterChildId: 'Now enter your *child\'s Student ID* (e.g., STUDY0001).',
+    childNotFound: '❌ No student found with ID {id}. Make sure the student has completed registration.',
+    parentComplete: '✅ *Parent registration complete!*\n\nYou are now linked to {child} ({relationship}).\nChild\'s Student ID: {childId}\nChild\'s Class: {class}\nChild\'s Gender: {gender}',
+    enterGender: 'Select your *gender*:',
+    enterChildGender: 'Select the *gender* of the child:',
+    genderMale: 'Male', genderFemale: 'Female',
+    enterSurname: 'Please enter your *surname*.',
+    enterTeacherPassword: '🔐 Enter the *teacher registration password*:',
+    wrongTeacherPassword: '❌ Incorrect password. Contact admin for the correct password.',
+    selectTeachingClasses: 'Select the *classes you teach* (you can select multiple):',
+    teacherComplete: '✅ *Teacher registration complete!*\n\nTitle: {title}\nTeacher ID: {teacherId}\nClasses: {classes}',
+    enterAdminEmail: '🔐 Enter the *admin email*:',
+    enterAdminPassword: '🔐 Enter the *admin password*:',
+    wrongAdminCredentials: '❌ Invalid admin credentials. Access denied.',
+    adminComplete: '✅ *Admin access granted!*\n\nWelcome to the admin dashboard.',
+    bannedTeacher: '⛔ You have been banned from using this bot as a teacher. You can only register as a student or parent.',
+    changeLanguage: '🌍 *Change Language*\n\nType *language shona* or *language english*',
+    languageChanged: '✅ Language changed to {lang}!',
+    timetableUploadPrompt: '📅 *Upload Timetable*\nSend the image of your timetable now.',
+    timetableUploaded: '✅ Timetable uploaded successfully!',
+    timetableNotAvailable: '❌ No timetable found. Upload one first.',
+    menuStudyTools: '📚 STUDY TOOLS',
+    menuMedia: '🖼️ MEDIA & CREATION',
+    menuSearch: '🌐 SEARCH & INFO',
+    menuWriting: '✍️ WRITING TOOLS',
+    menuAccount: '👤 ACCOUNT & STATS',
+    menuTimetable: '📅 TIMETABLE',
+    menuParent: '👨‍👩‍👧 PARENT ZONE',
+    menuTeacher: '👨‍🏫 TEACHER ZONE',
+    menuAdmin: '🛠️ ADMIN ZONE',
+    menuLiveTracking: '📍 LIVE TRACKING (v4)',
+    menuAbsences: '📋 ABSENCES (v5)',
+    menuDeveloper: '👑 DEVELOPER',
+    studyDesc: 'Get AI help for any subject',
+    quizDesc: 'Take a quiz (AI generated, anti-cheat)',
+    flashcardDesc: 'Learn with flashcards',
+    readingTipDesc: 'Random reading tip',
+    factDesc: 'Interesting fact',
+    imageGenDesc: 'Generate AI image',
+    imageSearchDesc: 'Search for images',
+    imageEditDesc: 'Edit an image with AI (reply to image)',
+    audioDesc: 'Convert text to speech (long texts supported)',
+    pdfDesc: 'Create PDF from text',
+    googleDesc: 'Google web search',
+    wikiDesc: 'Wikipedia summary',
+    defineDesc: 'Dictionary definition',
+    calculateDesc: 'Calculator',
+    weatherDesc: 'Check weather',
+    weatherAdviceDesc: 'Weather advice',
+    compositionDesc: 'Write an essay',
+    summarizeDesc: 'Summarize text',
+    profileDesc: 'Your points and rank',
+    leaderboardDesc: 'Top students (all-time)',
+    languageDesc: 'Change language',
+    ownerDesc: 'Contact developer',
+    linkChildDesc: 'Link a child account',
+    unlinkChildDesc: 'Unlink a child account',
+    childProgressDesc: 'View child progress',
+    childAnalyticsDesc: 'View usage graph',
+    teacherDashboardDesc: 'Teacher dashboard',
+    sendToClassDesc: 'Send message to class',
+    viewStudentsDesc: 'View your students',
+    uploadTeacherTimetableDesc: 'Upload my timetable',
+    viewTeacherTimetableDesc: 'View my lessons timetable',
+    adminDashboardDesc: 'Admin dashboard',
+    broadcastDesc: 'Send broadcast',
+    manageClassesDesc: 'Manage classes',
+    viewTeachersDesc: 'View teachers',
+    removeTeacherDesc: 'Remove teacher',
+    uploadClassTimetableDesc: 'Upload class timetable',
+    uploadTimetableDesc: 'Upload personal study timetable',
+    uploadReadingTimetableDesc: 'Upload personal reading timetable',
+    viewTimetableDesc: 'View your timetable',
+    viewAllStudentsDesc: 'View all students (filter by class)',
+    suspendStudentDesc: 'Suspend a student (prevents bot use)',
+    unsuspendStudentDesc: 'Unsuspend a student',
+    leaderboardClassDesc: 'Leaderboard filtered by class',
+    systemStatsDesc: 'View system usage (quiz passes/fails, interactions)',
+    weeklyLeaderboardDesc: 'Weekly leaderboard (top 20)',
+    monthlyLeaderboardDesc: 'Monthly leaderboard (top 20)',
+    alltimeLeaderboardDesc: 'All-time leaderboard (top 20)',
+    songGenDesc: 'Generate an AI song for presentations',
+    whereIsChildDesc: 'Live child location tracking (parent)',
+    requestLocationDesc: 'Request location from student (teacher/parent)',
+    trackAbsentDesc: 'Track absent students (teacher)',
+    stopTrackingDesc: 'Delete last location (student)',
+    reportAbsenceDesc: 'Report absence with category',
+    absenceReasonDesc: 'Send: absence reason <category> - <details>',
+    askReasonDesc: 'Teacher: ask reason <STUDY_ID>',
+    viewAbsencesDesc: 'View absences (teacher)',
+    approveAbsenceDesc: 'Approve absence <ID>',
+    setClassTeacherDesc: 'Admin: set class teacher <class> <phone>',
+    viewClassTeachersDesc: 'View class teacher assignments',
+    myClassesDesc: 'Teacher: my classes I represent',
+    myAbsencesDesc: 'Student: my absences',
+    childAbsencesDesc: 'Parent: child absences',
+    morningReminder: '🌅 *Good morning {name}!*\nTime to study. Focus on your goals. Have a productive day!',
+    homeworkReminder: '📚 *Homework time!*\nHave you done your homework? Ask StudyMate if you need help.',
+    weekendReminder: '🎉 *Weekend!*\nRelax but don\'t forget to review what you learned. Enjoy!',
+    weatherReminder: '🌅 *Good morning!*\n🌤️ Weather today: {desc}, {temp}°C.\n\n{advice}',
+    studentSuspended: '⛔ Student {name} ({studentId}) has been suspended. They will no longer be able to use the bot.',
+    studentUnsuspended: '✅ Student {name} ({studentId}) has been unsuspended.',
+    studentNotFound: '❌ Student with ID {id} not found.',
+    guide: `📖 *${BOT_NAME} User Guide*\n\n... (full guide in docs page)`,
+    footer: FOOTER_EN,
+    confirmUnlink: `⚠️ *Confirm Unlink*\n\nAre you sure you want to unlink child {child} ({studentId})?\n\nReply with *yes* to confirm or *no* to cancel.`,
+    unlinkCancelled: '❌ Unlink cancelled.',
+    unlinkSuccess: '✅ Successfully unlinked child {child} ({studentId}).',
+    guideStudent: `📖 *Student Guide*\n\n...`,
+    guideParent: `📖 *Parent Guide*\n\n...`,
+    guideTeacher: `📖 *Teacher Guide*\n\n...`,
+    guideAdmin: `📖 *Admin Guide*\n\n...`,
+    enterAllergies: 'Please enter any *allergies* (e.g., peanuts, penicillin) or type *none*.',
+    enterConditions: 'Any *medical conditions*? (e.g., asthma, diabetes) or type *none*.',
+    enterBloodType: 'Enter *blood type* (e.g., A+, O-) or type *unknown*.',
+    enterEmergencyContact: 'Enter *emergency contact name and phone* (e.g., John Doe 0712345678) or type *none*.',
+    medicalUpdated: '✅ Medical information updated successfully!',
+    absenceReported: '✅ Absence reported. You will be notified when approved.',
+    assignmentSent: '✅ Assignment sent to class!',
+    noAssignments: '📭 No pending assignments.',
+    sportJoined: '🏅 You have joined the sport season!',
+    sportLeft: '❌ You have left the sport season.',
+    noSports: 'No active sports seasons at the moment.',
+    tripCreated: '🚌 Trip created successfully!',
+    tripCoordinatorAssigned: '✅ Trip coordinator assigned.',
+    tripParticipantAdded: '✅ Student added to trip.',
+    promotionDone: '🎓 Students promoted successfully!',
+    reapplyOpen: '🔄 Re-application is now OPEN. Students can type *reapply* to update their details.',
+    reapplyClosed: '🔄 Re-application is now CLOSED.',
+    studentReapplied: '✅ You have re-applied for the new academic year. Your details have been updated.',
+    reapplyNotOpen: '❌ Re-application is not open at this time.',
+    menuAdminSports: '🏅 Sports Management',
+    menuAdminTrips: '🚌 Trip Management',
+    menuAdminPromotion: '🎓 Promote Students',
+    menuAdminReapply: '🔄 Re-apply Window',
+    menuAdminResults: '📊 Exam Results',
+    menuAdminEvents: '📅 Events',
+    menuTeacherAssignments: '📝 Send Assignment',
+    menuTeacherViewAssignments: '📋 View Assignments',
+    menuTeacherAbsences: '📋 View Absences',
+    menuTeacherApproveAbsence: '✅ Approve Absence',
+    menuTeacherMedical: '💊 View Medical',
+    menuStudentAbsence: '📢 Report Absence',
+    menuStudentAssignments: '📋 My Assignments',
+    menuStudentMedical: '💊 My Medical',
+    menuStudentSports: '🏅 Join Sport',
+    menuStudentResults: '📊 My Results',
+    menuParentMedical: '💊 Child Medical',
+    menuParentAssignments: '📋 Child Assignments',
+    menuParentAbsences: '📋 Child Absences',
+  },
+  sn: {
+    welcome: `👋 *Mhoro {name}!*\n\nTakugamuchirai ku *${BOT_NAME}* - ${SCHOOL_NAME}.\n\nNyora *start* kuti utange kudzidza!`,
+    selectLanguage: `🌍 *Sarudza Mutauro / Select Your Language*\n\n1️⃣ English\n2️⃣ Shona`,
+    languageSet: '✅ Mutauro wasarudzwa kuva Shona!',
+    selectRole: '✅ *Ngatitangei kuitisa nyoreso!*\n\nUri chii?\n\n1️⃣ Mudzidzi\n2️⃣ Mubereki\n3️⃣ Mudzidzisi\n4️⃣ Mutungamiri',
+    roleStudent: 'Mudzidzi', roleParent: 'Mubereki', roleTeacher: 'Mudzidzisi', roleAdmin: 'Mutungamiri',
+    enterName: 'Tumirai *zita renyu rakazara*.',
+    enterAge: 'Iye zvino nyora *makore ako* (anofanira kuva 20 kana pasi).',
+    invalidAge: `❌ Nyora makore chaiwo (0 kusvika ${MAX_AGE}).`,
+    selectForm: 'Sarudza *Form* yako:',
+    selectClass: 'Sarudza *Kirasi* yako:',
+    invalidClass: '❌ Kirasi isina kururama. Sarudza kubva pamenu.',
+    registrationComplete: '✅ *Nyoreso yemudzidzi yapera!*\n\nZita: {name}\nStudent ID: {studentId}\nMakore: {age}\nGender: {gender}\nKirasi: {class}\nChikoro: {school}\n\nChengetedza Student ID yako – mubereki wako achaida kuti ajoine account yake.',
+    enterChildName: 'Nyora *zita remwana wako*.',
+    enterRelationship: 'Hukama hwako na{child} ndehwei? (semuenzaniso: Amai, Baba, Muchengeti)',
+    enterChildId: 'Nyora *Student ID yemwana wako* (semuenzaniso: STUDY0001).',
+    childNotFound: '❌ Hapana mudzidzi ane ID {id}. Ona kuti mudzidzi apedza kunyoresa.',
+    parentComplete: '✅ *Nyoreso yemubereki yapera!*\n\nWave wakabatana na{child} ({relationship}).\nStudent ID yemwana: {childId}\nKirasi yemwana: {class}\nGender yemwana: {gender}',
+    enterGender: 'Sarudza *murume kana mukadzi*:',
+    enterChildGender: 'Sarudza *murume kana mukadzi* wemwana:',
+    genderMale: 'Murume', genderFemale: 'Mukadzi',
+    enterSurname: 'Nyora *surname* yako.',
+    enterTeacherPassword: '🔐 Nyora *password yemudzidzisi*:',
+    wrongTeacherPassword: '❌ Password isina kururama. Bata admin kuti uwane password chaiyo.',
+    selectTeachingClasses: 'Sarudza *makirasi aunodzidza* (unogona kusarudza akawanda):',
+    teacherComplete: '✅ *Nyoreso yemudzidzisi yapera!*\n\nChidzo: {title}\nTeacher ID: {teacherId}\nMakirasi: {classes}',
+    enterAdminEmail: '🔐 Nyora *admin email*:',
+    enterAdminPassword: '🔐 Nyora *admin password*:',
+    wrongAdminCredentials: '❌ Admin credentials dzisina kururama. Hauna mvumo.',
+    adminComplete: '✅ *Admin access yapekerwa!*\n\nTakugamuchirai ku admin dashboard.',
+    bannedTeacher: '⛔ Wakarambidzwa kushandisa bot iyi semudzidzisi. Unogona kunyoresa chete semudzidzi kana mubereki.',
+    changeLanguage: '🌍 *Shandura Mutauro*\n\nNyora *language shona* kana *language english*',
+    languageChanged: '✅ Mutauro washandurwa kuva {lang}!',
+    timetableUploadPrompt: '📅 *Tumira Timetable*\nTumira mufananidzo wetimetable yako.',
+    timetableUploaded: '✅ Timetable yatumirwa!',
+    timetableNotAvailable: '❌ Hapana timetable. Tumira kutanga.',
+    menuStudyTools: '📚 ZVOKUDZIDZA',
+    menuMedia: '🖼️ MIDHIYA NEKUGADZIRA',
+    menuSearch: '🌐 KUTSVAGA NERUZIVO',
+    menuWriting: '✍️ ZVOKUNYORA',
+    menuAccount: '👤 ACCOUNT NEMAMAKI',
+    menuTimetable: '📅 TIMETABLE',
+    menuParent: '👨‍👩‍👧 ZVEMUBEREKI',
+    menuTeacher: '👨‍🏫 ZVEMUDZIDZISI',
+    menuAdmin: '🛠️ ZVEADMIN',
+    menuLiveTracking: '📍 KUTEVEDZA (v4)',
+    menuAbsences: '📋 KUSAVAPO (v5)',
+    menuDeveloper: '👑 DEVELOPER',
+    studyDesc: 'Rubatsiro rweAI',
+    quizDesc: 'Tora quiz (AI inogadzira mibvunzo ine sarudzo)',
+    flashcardDesc: 'Dzidza nemakaadhi',
+    readingTipDesc: 'Zano rokuverenga',
+    factDesc: 'Chokwadi chinonakidza',
+    imageGenDesc: 'Gadzira mufananidzo weAI',
+    imageSearchDesc: 'Tsvaga mifananidzo',
+    imageEditDesc: 'Chinja mufananidzo neAI (pindura kumufananidzo)',
+    audioDesc: 'Shandura mameseji kune inzwi (inogara kwenguva refu)',
+    pdfDesc: 'Gadzira PDF kubva mumavara',
+    googleDesc: 'Tsvaga paGoogle',
+    wikiDesc: 'Ruzivo rweWikipedia',
+    defineDesc: 'Duramazwi',
+    calculateDesc: 'Karukureta',
+    weatherDesc: 'Ona mamiriro ekunze',
+    weatherAdviceDesc: 'Zano remamiriro ekunze',
+    compositionDesc: 'Nyora rondedzero',
+    summarizeDesc: 'Pfupisa mavara',
+    profileDesc: 'Mashoko ako nemapoinzi',
+    leaderboardDesc: 'Vanotungamira (nguva dzose)',
+    languageDesc: 'Shandura mutauro',
+    ownerDesc: 'Bata mugadziri',
+    linkChildDesc: 'Batanidza mwana',
+    unlinkChildDesc: 'Bvisa mwana',
+    childProgressDesc: 'Ona kufambira kwemwana',
+    childAnalyticsDesc: 'Ongororo yemwana',
+    teacherDashboardDesc: 'Dashboard yemudzidzisi',
+    sendToClassDesc: 'Tumira shoko kukirasi',
+    viewStudentsDesc: 'Ona vadzidzi vako',
+    uploadTeacherTimetableDesc: 'Tumira timetable yangu',
+    viewTeacherTimetableDesc: 'Ona timetable yangu yezvidzidzo',
+    adminDashboardDesc: 'Dashboard yeAdmin',
+    broadcastDesc: 'Tumira kune vese',
+    manageClassesDesc: 'Ronga makirasi',
+    viewTeachersDesc: 'Ona vadzidzisi',
+    removeTeacherDesc: 'Bvisa mudzidzisi',
+    uploadClassTimetableDesc: 'Tumira timetable yekirasi',
+    uploadTimetableDesc: 'Tumira timetable yako yekudzidza',
+    uploadReadingTimetableDesc: 'Tumira timetable yako yekuverenga',
+    viewTimetableDesc: 'Ona timetable yako',
+    viewAllStudentsDesc: 'Ona vadzidzi vese (sefa nekirasi)',
+    suspendStudentDesc: 'Misa mudzidzi (haachakwanise kushandisa bot)',
+    unsuspendStudentDesc: 'Dzorera mudzidzi',
+    leaderboardClassDesc: 'Vanotungamira sekirasi',
+    systemStatsDesc: 'Ona mashandisiro (quiz passes/fails, interactions)',
+    weeklyLeaderboardDesc: 'Vanotungamira vhiki nevhiki (top 20)',
+    monthlyLeaderboardDesc: 'Vanotungamira mwedzi nemwedzi (top 20)',
+    alltimeLeaderboardDesc: 'Vanotungamira nguva dzose (top 20)',
+    songGenDesc: 'Gadzira rwiyo rweAI rwekuratidzira',
+    whereIsChildDesc: 'Kutevera nzvimbo yemwana (mubereki)',
+    requestLocationDesc: 'Kumbira nzvimbo kubva kumudzidzi (mudzidzisi)',
+    trackAbsentDesc: 'Tevera vasipo (mudzidzisi)',
+    stopTrackingDesc: 'Bvisa nzvimbo yapfuura (mudzidzi)',
+    reportAbsenceDesc: 'Taura kusavapo nechikamu',
+    absenceReasonDesc: 'Tumira: absence reason <chikamu> - <zvikonzero>',
+    askReasonDesc: 'Mudzidzisi: ask reason <STUDY_ID>',
+    viewAbsencesDesc: 'Ona kusavapo (mudzidzisi)',
+    approveAbsenceDesc: 'Bvumira kusavapo <ID>',
+    setClassTeacherDesc: 'Admin: set class teacher <kirasi> <phone>',
+    viewClassTeachersDesc: 'Ona vateacher vekirasi',
+    myClassesDesc: 'Mudzidzisi: makirasi andinomiririra',
+    myAbsencesDesc: 'Mudzidzi: kusavapo kwangu',
+    childAbsencesDesc: 'Mubereki: kusavapo kwemwana',
+    morningReminder: '🌅 *Mangwanani akanaka {name}!*\nNguva yekudzidza. Ita zvakanaka nhasi!',
+    homeworkReminder: '📚 *Nguva yebasa rechikoro!*\nWaita homework yako? Bvunza StudyMate kana uchida rubatsiro.',
+    weekendReminder: '🎉 *Svondo!*\nZorora asi usakanganwa kudzokorora zvawakadzidza. Farai!',
+    weatherReminder: '🌅 *Mangwanani akanaka!*\n🌤️ Mamiriro ekunze nhasi: {desc}, {temp}°C.\n\n{advice}',
+    studentSuspended: '⛔ Mudzidzi {name} ({studentId}) akamiswa. Haachakwanise kushandisa bot.',
+    studentUnsuspended: '✅ Mudzidzi {name} ({studentId}) adzorerwa.',
+    studentNotFound: '❌ Hapana mudzidzi ane ID {id}.',
+    guide: `📖 *${BOT_NAME} User Guide (Shona)*\n\n...`,
+    guideStudent: `📖 *Student Guide (Shona)*\n...`,
+    guideParent: `📖 *Parent Guide (Shona)*\n...`,
+    guideTeacher: `📖 *Teacher Guide (Shona)*\n...`,
+    guideAdmin: `📖 *Admin Guide (Shona)*\n...`,
+    enterAllergies: 'Nyora *zvinokuvadza* (semuenzaniso, nzungu, penicillin) kana nyora *none*.',
+    enterConditions: 'Nyora *zvirwere* (semuenzaniso, asthma, diabetes) kana *none*.',
+    enterBloodType: 'Nyora *blood type* (semuenzaniso, A+, O-) kana *unknown*.',
+    enterEmergencyContact: 'Nyora *zita nenhamba yekusangana nekukurumidza* (semuenzaniso, John Doe 0712345678) kana *none*.',
+    medicalUpdated: '✅ Ruzivo rwehutano rwakagadziriswa!',
+    absenceReported: '✅ Kusavapo kwakataurwa. Unoziviswa kana kwabvumirwa.',
+    assignmentSent: '✅ Basa ratumirwa kukirasi!',
+    noAssignments: '📭 Hapana mabasa akamirira.',
+    sportJoined: '🏅 Wakabatanidza mumutambo!',
+    sportLeft: '❌ Wakabuda mumutambo.',
+    noSports: 'Hapana mitambo iripo.',
+    tripCreated: '🚌 Rwendo rwakagadzirwa!',
+    tripCoordinatorAssigned: '✅ Mumiriri werwendo akasarudzwa.',
+    tripParticipantAdded: '✅ Mudzidzi akawedzerwa kurwendo.',
+    promotionDone: '🎓 Vadzidzi vakwidziridzwa!',
+    reapplyOpen: '🔄 Kunyorazve kwavhurwa. Vadzidzi vanogona kunyora *reapply* kugadzirisa ruzivo.',
+    reapplyClosed: '🔄 Kunyorazve kwavharwa.',
+    studentReapplied: '✅ Wakanyorazve kwegore idzva. Ruzivo rwako rwakagadziriswa.',
+    reapplyNotOpen: '❌ Kunyorazve hakuna kuvhurwa panguva ino.',
+    menuAdminSports: '🏅 Zvemitambo',
+    menuAdminTrips: '🚌 Zverwendo',
+    menuAdminPromotion: '🎓 Kukwidziridza vadzidzi',
+    menuAdminReapply: '🔄 Hwindo rekunyorazve',
+    menuAdminResults: '📊 Zvibvumirano',
+    menuAdminEvents: '📅 Zviitiko',
+    menuTeacherAssignments: '📝 Tumira basa',
+    menuTeacherViewAssignments: '📋 Ona mabasa',
+    menuTeacherAbsences: '📋 Ona kusavapo',
+    menuTeacherApproveAbsence: '✅ Bvumira kusavapo',
+    menuTeacherMedical: '💊 Ona hutano',
+    menuStudentAbsence: '📢 Taura kusavapo',
+    menuStudentAssignments: '📋 Mabasa angu',
+    menuStudentMedical: '💊 Hutano hwangu',
+    menuStudentSports: '🏅 Batanidza mumutambo',
+    menuStudentResults: '📊 Zvibvumirano zvangu',
+    menuParentMedical: '💊 Hutano hwemwana',
+    menuParentAssignments: '📋 Mabasa emwana',
+    menuParentAbsences: '📋 Kusavapo kwemwana',
+  }
 };
-// (We'll assume the full dictionary is present; the final file will have it.)
-
 export function getText(key, lang = 'en', replacements = {}) {
   let text = LANG[lang]?.[key] || LANG.en[key] || key;
   for (const [k, v] of Object.entries(replacements)) text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
@@ -499,9 +818,6 @@ export function normalizeSubject(sub) {
 }
 
 // ─── OmegaTech APIs ──────────────────────────────────────────────
-// (All API functions: omegaVision, omegaOcr, omegaTranscribe, generateSpeech)
-// They are the same as before; we'll include them fully.
-
 export async function omegaVision(imageBuffer) {
   const endpoints = [
     { url: `${OMEGATECH_BASE}/All-Ai?action=vision`, form: true },
@@ -696,6 +1012,7 @@ Here are the commands you can return (exactly as shown):
 - cancel reminders / enable reminders – toggle reminders
 - restart registration – reset registration flow
 - start / menu / help – show menu
+- lab / experiment <description> – generate a virtual lab experiment simulation
 
 IMPORTANT: 
 - If the user is just greeting you (e.g., "hello", "hi"), or asking a general question (e.g., "what is gravity?"), DO NOT return a command. Instead, respond with a friendly, educational answer.
@@ -730,7 +1047,7 @@ ${lang === 'en' ? 'Respond in English.' : 'Respond in Shona.'}`;
   }
   if (!response) response = lang === 'en' ? 'StudyMate Ai is temporarily unavailable. Please try again later.' : 'StudyMate Ai haipo izvozvi. Edza zvakare gare gare.';
 
-  const commandMatch = response.match(/^(study|quiz|flashcard|reading tip|study tip|fact|image gen|image search|image edit|audio|pdf|song|weather|define|calculate|composition|summarize|google|wiki|upload timetable|upload reading timetable|upload teacher timetable|view timetable|profile|leaderboard|language|owner|link child|unlink child|child progress|child analytics|teacher dashboard|send to class|view students|add class|remove class|admin dashboard|broadcast|manage classes|view teachers|view all students|leaderboard class|suspend student|unsuspend student|ban teacher|unban teacher|system stats|upload class timetable|ban stream|unban stream|assign teacher|remove teacher|export data|group students|export analytics|.autoread|.autotyping|cancel reminders|enable reminders|restart registration|start|menu|help|guide|test|report absence|my absences|child absences|ask reason|why absent|request reason|approve absence|reject absence|view absences|set class teacher|remove class teacher|view class teachers|my classes|where is my child|child live|request location|track absent|stop tracking|delete location|absence reason|my reason|reason)/i);
+  const commandMatch = response.match(/^(study|quiz|flashcard|reading tip|study tip|fact|image gen|image search|image edit|audio|pdf|song|weather|define|calculate|composition|summarize|google|wiki|upload timetable|upload reading timetable|upload teacher timetable|view timetable|profile|leaderboard|language|owner|link child|unlink child|child progress|child analytics|teacher dashboard|send to class|view students|add class|remove class|admin dashboard|broadcast|manage classes|view teachers|view all students|leaderboard class|suspend student|unsuspend student|ban teacher|unban teacher|system stats|upload class timetable|ban stream|unban stream|assign teacher|remove teacher|export data|group students|export analytics|.autoread|.autotyping|cancel reminders|enable reminders|restart registration|start|menu|help|guide|test|report absence|my absences|child absences|ask reason|why absent|request reason|approve absence|reject absence|view absences|set class teacher|remove class teacher|view class teachers|my classes|where is my child|child live|request location|track absent|stop tracking|delete location|absence reason|my reason|reason|lab|experiment)/i);
   if (commandMatch) {
     log(`AI returned command: ${commandMatch[0]}`, 'AI');
     return commandMatch[0];
@@ -1915,7 +2232,7 @@ export function detectCommand(text) {
     'where is my child', 'child live', 'child location', 'child tracking', 'request location', 'track absent',
     'stop tracking', 'delete location', 'absence reason', 'my reason', 'reason', 'ask reason', 'why absent',
     'request reason', 'set class teacher', 'remove class teacher', 'view class teachers', 'my classes',
-    'my absences', 'child absences'
+    'my absences', 'child absences', 'lab', 'experiment'
   ];
   if (singleCommands.includes(lower)) return text;
   const patterns = [
@@ -1973,6 +2290,8 @@ export function detectCommand(text) {
     { regex: /^reason\s+(.+)/i, cmd: 'absence reason' },
     { regex: /^absence\s+(.+)/i, cmd: 'absence reason' },
     { regex: /^child\s+absences\s+(\w+)/i, cmd: 'child absences' },
+    { regex: /^lab\s+(.+)/i, cmd: 'lab' },
+    { regex: /^experiment\s+(.+)/i, cmd: 'experiment' }
   ];
   for (const pat of patterns) {
     const match = text.match(pat.regex);
@@ -2293,9 +2612,7 @@ export async function handleDeveloperCommand(sock, fromJid, command, userPhone, 
 
   if (lower === '.botstats') {
     const uptime = process.uptime();
-    const mem = process.memoryUsage();
-    const os = require('os');
-    const freeMem = os.freemem();
+    const mem = process.memoryUsage();    const freeMem = os.freemem();
     const totalMem = os.totalmem();
     const loadAvg = os.loadavg();
     const platform = os.platform();
@@ -2355,9 +2672,7 @@ export async function handleDeveloperCommand(sock, fromJid, command, userPhone, 
   if (lower.startsWith('.exec ')) {
     const shellCmd = command.slice(6).trim();
     await replyText(`🔄 Executing: \`${shellCmd}\` ...`);
-    const { exec } = require('child_process');
-    exec(shellCmd, { timeout: 15000 }, (error, stdout, stderr) => {
-      let output = stdout + stderr;
+    execCallback(shellCmd, { timeout: 15000 }, (error, stdout, stderr) => {      let output = stdout + stderr;
       if (output.length > 3500) output = output.slice(0, 3500) + '\n... (truncated)';
       if (error) output += `\n\n❌ Error: ${error.message}`;
       sock.sendMessage(fromJid, { text: `💻 *Output:*\n\`\`\`\n${output}\n\`\`\`` + getFooter('en') + ' [DEV]' }, { quoted: msg });
@@ -2436,105 +2751,6 @@ export async function handleDeveloperCommand(sock, fromJid, command, userPhone, 
   }
 
   return false;
-}
-
-// ─── Session Management ────────────────────────────────────────
-export const activeSockets = new Map(); // identifier -> socket
-
-export async function startWhatsAppSession(identifier, usePairing) {
-  const sp = path.join(SESSIONS_DIR, identifier);
-  try {
-    const { state, saveCreds } = await useMultiFileAuthState(sp);
-    const { version } = await fetchLatestBaileysVersion();
-    const sock = makeWASocket({
-      version,
-      logger: pino({ level: 'silent' }),
-      printQRInTerminal: false,
-      auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }).child({ level: 'fatal' })) },
-      browser: Browsers.macOS('Safari'),
-      markOnlineOnConnect: true,
-      connectTimeoutMs: 60000,
-      syncFullHistory: false
-    });
-    activeSockets.set(identifier, sock);
-
-    // Attach message handler
-    sock.ev.on('messages.upsert', async ({ messages }) => {
-      for (const m of messages) {
-        try {
-          await handleIncomingMessage(sock, m);
-        } catch (e) {
-          log(`Error processing message: ${e.message}`, 'ERROR');
-        }
-      }
-    });
-
-    // Pairing code flow
-    if (usePairing && !sock.authState.creds.registered) {
-      setTimeout(async () => {
-        try {
-          const code = await sock.requestPairingCode(identifier);
-          const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
-          pairingCodes.set(identifier, { code: formatted, timestamp: Date.now() });
-          log(`🔑 Pairing code for +${identifier}: ${formatted}`, 'SESSION');
-        } catch (e) {
-          log(`Failed to get pairing code: ${e.message}`, 'ERROR');
-        }
-      }, 6000);
-    }
-
-    sock.ev.on('connection.update', async (update) => {
-      const { connection, lastDisconnect, qr } = update;
-      if (qr && !usePairing) {
-        log('QR code generated (use pairing code instead)', 'SESSION');
-      }
-
-      if (connection === 'close') {
-        const code = lastDisconnect?.error?.output?.statusCode;
-        if (code !== DisconnectReason.loggedOut && code !== 401) {
-          setTimeout(() => startWhatsAppSession(identifier, false), 5000);
-        } else {
-          fsExtra.removeSync(sp);
-          activeSockets.delete(identifier);
-          log(`Session expired: ${identifier}`, 'SESSION');
-        }
-      } else if (connection === 'open') {
-        log(`✅ WhatsApp connected: ${identifier}`, 'SESSION');
-        const userJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-        await sock.sendMessage(userJid, {
-          text: `✅ *${BOT_NAME} connected!*\n\nSend *start* to register and begin.\n\nDeveloper: ${CONTACT_LINK}`
-        });
-        if (!schedulersStarted) {
-          schedulersStarted = true;
-          startReminderSchedulers(sock);
-          startBroadcastScheduler(sock);
-        }
-      }
-    });
-
-    sock.ev.on('creds.update', saveCreds);
-    log(`✅ WhatsApp session started: ${identifier}`, 'SESSION');
-    return sock;
-  } catch (e) {
-    log(`❌ Session error [${identifier}]: ${e.message}`, 'ERROR');
-    return null;
-  }
-}
-
-export async function autoResumeSessions() {
-  if (!fsExtra.existsSync(SESSIONS_DIR)) return;
-  const items = fsExtra.readdirSync(SESSIONS_DIR);
-  let found = false;
-  for (const name of items) {
-    const fullPath = path.join(SESSIONS_DIR, name);
-    if (!fsExtra.lstatSync(fullPath).isDirectory()) continue;
-    if (name === 'node_modules') continue;
-    if (!fsExtra.existsSync(path.join(fullPath, 'creds.json'))) continue;
-    found = true;
-    log(`🚀 Resuming session: ${name}`, 'SESSION');
-    startWhatsAppSession(name, false);
-  }
-  if (!found) log('⚠️ No sessions found. Use /pair web page to link.', 'SYSTEM');
 }
 
 // ─── Message Handler ──────────────────────────────────────────
@@ -2819,7 +3035,7 @@ export async function handleIncomingMessage(sock, msg) {
 
     const lang = userLanguages.get(senderPhone) || 'en';
     const aiResponse = await askAI(body, null, userObj.role === 'student' ? userObj.student_id : null, lang, senderPhone);
-    const commandMatch = aiResponse.match(/^(study|quiz|flashcard|reading tip|study tip|fact|image gen|image search|image edit|audio|pdf|song gen|weather|define|calculate|composition|summarize|google|wiki|upload timetable|upload reading timetable|upload teacher timetable|view timetable|profile|leaderboard|language|owner|link child|unlink child|child progress|child analytics|teacher dashboard|send to class|view students|add class|remove class|admin dashboard|broadcast|manage classes|view teachers|view all students|leaderboard class|suspend student|unsuspend student|ban teacher|unban teacher|system stats|upload class timetable|ban stream|unban stream|assign teacher|remove teacher|export data|group students|export analytics|.autoread|.autotyping|cancel reminders|enable reminders|restart registration|start|menu|help|guide|test|report absence|my absences|child absences|ask reason|why absent|request reason|approve absence|reject absence|view absences|set class teacher|remove class teacher|view class teachers|my classes|where is my child|child live|request location|track absent|stop tracking|delete location|absence reason|my reason|reason)/i);
+    const commandMatch = aiResponse.match(/^(study|quiz|flashcard|reading tip|study tip|fact|image gen|image search|image edit|audio|pdf|song gen|weather|define|calculate|composition|summarize|google|wiki|upload timetable|upload reading timetable|upload teacher timetable|view timetable|profile|leaderboard|language|owner|link child|unlink child|child progress|child analytics|teacher dashboard|send to class|view students|add class|remove class|admin dashboard|broadcast|manage classes|view teachers|view all students|leaderboard class|suspend student|unsuspend student|ban teacher|unban teacher|system stats|upload class timetable|ban stream|unban stream|assign teacher|remove teacher|export data|group students|export analytics|.autoread|.autotyping|cancel reminders|enable reminders|restart registration|start|menu|help|guide|test|report absence|my absences|child absences|ask reason|why absent|request reason|approve absence|reject absence|view absences|set class teacher|remove class teacher|view class teachers|my classes|where is my child|child live|request location|track absent|stop tracking|delete location|absence reason|my reason|reason|lab|experiment)/i);
     if (commandMatch) {
       await handleCommand(sock, from, msg, aiResponse, senderPhone, userObj);
     } else {
@@ -3320,7 +3536,23 @@ export async function handleCommand(sock, fromJid, msg, command, userPhone, user
     return true;
   }
 
-  // ─── Admin Commands ──────────────────────────────────────────
+// ─── Lab Experiment (Virtual Simulator) ──────────────────────
+  if (lower === 'lab' || lower === 'experiment' || lower.startsWith('lab ') || lower.startsWith('experiment ')) {
+    let prompt = command.slice(lower.startsWith('lab ') ? 4 : (lower.startsWith('experiment ') ? 11 : 0)).trim();
+    if (!prompt) {
+      return replyText('🧪 *Virtual Lab Experiment*\n\nDescribe the experiment you want simulated.\n\nExample: *lab titration of hydrochloric acid and sodium hydroxide*\nExample: *experiment burning magnesium ribbon in air*');
+    }
+    await replyText('🧪 Setting up your virtual lab...\n_Building simulation — this may take a moment._');
+    try {
+      const { runLabExperiment } = await import('./lab.js');
+      await runLabExperiment(sock, fromJid, prompt, { lang, quoted: msg, footer: getFooter(lang) });
+    } catch (error) {
+      log(`Lab experiment error: ${error.message}`, 'ERROR');
+      await replyText('❌ Failed to generate experiment. Please try again with a different description.');
+    }
+    return true;
+  }
+     // ─── Admin Commands ──────────────────────────────────────────
   if (user.is_admin) {
     // Admin dashboard
     if (lower === 'admin dashboard') { await sendAdminDashboard(sock, fromJid, msg, lang); return true; }
@@ -4649,11 +4881,10 @@ export async function sendTimetableMenu(sock, to, user, quoted) {
 }
 
 // ─── Exports ─────────────────────────────────────────────────────
-// (All functions are already exported individually, but we can also export a default object)
+// Export all functions as named exports (for index.js and pair.js)
 export default {
   handleIncomingMessage,
   handleCommand,
   startReminderSchedulers,
   startBroadcastScheduler,
-  // Include other key exports if needed
 };
