@@ -548,86 +548,118 @@
   }
 
   // ─── Pairing code flow ─────────────────────────────────────
-  document.getElementById('submitPhone').addEventListener('click', async function() {
-    const btn = this;
-    const number = document.getElementById('number').value.trim();
-    const resultDiv = document.getElementById('phoneResult');
-    const cleanNum = cleanNumber(number);
+document.getElementById('submitPhone').addEventListener('click', async function() {
+  const btn = this;
+  const number = document.getElementById('number').value.trim();
+  const resultDiv = document.getElementById('phoneResult');
+  const cleanNum = cleanNumber(number);
 
-    if (!cleanNum || cleanNum.length < 10) {
-      resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', 'Please enter a valid number with country code.');
+  if (!cleanNum || cleanNum.length < 10) {
+    resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', 'Please enter a valid number with country code.');
+    return;
+  }
+
+  btn.disabled = true;
+  resultDiv.innerHTML = statusHTML('loading', '', 'Requesting your pairing code…');
+
+  try {
+    const response = await fetch(`/code?number=${cleanNum}`);
+    const data = await response.json();
+
+    if (data.code && data.code !== 'already_connected') {
+      const expiresInMs = data.expiresInMs || 60000;
+      renderExpiringCode(resultDiv, data.code, expiresInMs, btn);
+    } else if (data.code === 'already_connected') {
+      resultDiv.innerHTML = statusHTML('success', 'fa-circle-check', 'This number is already connected.');
+      btn.disabled = false;
+    } else {
+      resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', data.error || 'Service unavailable. Please try again.');
+      btn.disabled = false;
+    }
+  } catch (e) {
+    resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', 'Error: ' + e.message);
+    btn.disabled = false;
+  }
+});
+
+function renderExpiringCode(resultDiv, code, expiresInMs, btn) {
+  let remaining = Math.floor(expiresInMs / 1000);
+  resultDiv.innerHTML = `
+    <div class="code-display" id="codeText">${code}</div>
+    <div class="code-meta">
+      <span><i class="fa-solid fa-clock"></i> Expires in <b id="countdownText">${remaining}</b>s — enter it in WhatsApp now</span>
+      <button class="copy-btn" id="copyBtn"><i class="fa-regular fa-copy"></i> Copy</button>
+    </div>`;
+  document.getElementById('copyBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(code.replace(/-/g, ''));
+    const b = document.getElementById('copyBtn');
+    b.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+    setTimeout(() => b.innerHTML = '<i class="fa-regular fa-copy"></i> Copy', 1800);
+  });
+
+  const countdownEl = document.getElementById('countdownText');
+  const interval = setInterval(() => {
+    remaining -= 1;
+    if (countdownEl) countdownEl.textContent = remaining;
+    if (remaining <= 0) {
+      clearInterval(interval);
+      resultDiv.innerHTML = statusHTML('error', 'fa-clock', 'Code expired. Click "Get Code" to try again.');
+      btn.disabled = false;
+    }
+  }, 1000);
+}
+
+// ─── QR flow — no number required ───────────────────────────
+document.getElementById('submitQR').addEventListener('click', async function() {
+  const btn = this;
+  const resultDiv = document.getElementById('qrResult');
+
+  btn.disabled = true;
+  resultDiv.innerHTML = statusHTML('loading', '', 'Generating your QR code…');
+
+  try {
+    const response = await fetch(`/pair-qr`);
+
+    if (response.status === 504) {
+      resultDiv.innerHTML = statusHTML('error', 'fa-clock', 'Timed out waiting for QR. Please try again.');
+      btn.disabled = false;
+      return;
+    }
+    if (!response.ok) {
+      let msg = 'Service unavailable.';
+      try { const j = await response.json(); msg = j.error || msg; } catch {}
+      resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', msg);
+      btn.disabled = false;
       return;
     }
 
-    btn.disabled = true;
-    resultDiv.innerHTML = statusHTML('loading', '', 'Requesting your pairing code…');
+    const expiresInMs = parseInt(response.headers.get('X-Expires-In-Ms') || '60000', 10);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    renderExpiringQR(resultDiv, url, expiresInMs, btn);
+  } catch (e) {
+    resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', 'Error: ' + e.message);
+    btn.disabled = false;
+  }
+});
 
-    try {
-      const response = await fetch(`/code?number=${cleanNum}`);
-      const data = await response.json();
+function renderExpiringQR(resultDiv, imgUrl, expiresInMs, btn) {
+  let remaining = Math.floor(expiresInMs / 1000);
+  resultDiv.innerHTML = `
+    <div class="qr-frame"><img src="${imgUrl}" alt="WhatsApp QR Code" class="qr-img"></div>
+    <div class="code-meta"><span><i class="fa-solid fa-camera"></i> Scan now — expires in <b id="qrCountdown">${remaining}</b>s</span></div>`;
 
-      if (data.code && data.code !== 'already_connected') {
-        resultDiv.innerHTML = `
-          <div class="code-display" id="codeText">${data.code}</div>
-          <div class="code-meta">
-            <span><i class="fa-solid fa-clock"></i> Enter this in WhatsApp within 60 seconds</span>
-            <button class="copy-btn" id="copyBtn"><i class="fa-regular fa-copy"></i> Copy</button>
-          </div>`;
-        document.getElementById('copyBtn').addEventListener('click', () => {
-          navigator.clipboard.writeText(data.code.replace(/-/g, ''));
-          const b = document.getElementById('copyBtn');
-          b.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
-          setTimeout(() => b.innerHTML = '<i class="fa-regular fa-copy"></i> Copy', 1800);
-        });
-      } else if (data.code === 'already_connected') {
-        resultDiv.innerHTML = statusHTML('success', 'fa-circle-check', 'This number is already connected.');
-      } else {
-        resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', data.error || 'Service unavailable. Please try again.');
-      }
-    } catch (e) {
-      resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', 'Error: ' + e.message);
-    } finally {
+  const countdownEl = document.getElementById('qrCountdown');
+  const interval = setInterval(() => {
+    remaining -= 1;
+    if (countdownEl) countdownEl.textContent = remaining;
+    if (remaining <= 0) {
+      clearInterval(interval);
+      resultDiv.innerHTML = statusHTML('error', 'fa-clock', 'QR code expired. Click "Generate QR Code" to try again.');
       btn.disabled = false;
     }
-  });
-
-  // ─── QR flow — no number required ───────────────────────────
-  document.getElementById('submitQR').addEventListener('click', async function() {
-    const btn = this;
-    const resultDiv = document.getElementById('qrResult');
-
-    btn.disabled = true;
-    resultDiv.innerHTML = statusHTML('loading', '', 'Generating your QR code…');
-
-    try {
-      const response = await fetch(`/pair-qr`);
-
-      if (response.status === 504) {
-        resultDiv.innerHTML = statusHTML('error', 'fa-clock', 'Timed out waiting for QR. Please try again.');
-        return;
-      }
-      if (!response.ok) {
-        let msg = 'Service unavailable.';
-        try { const j = await response.json(); msg = j.error || msg; } catch {}
-        resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', msg);
-        return;
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      resultDiv.innerHTML = `
-        <div class="qr-frame"><img src="${url}" alt="WhatsApp QR Code" class="qr-img"></div>
-        <div class="code-meta"><span><i class="fa-solid fa-camera"></i> Scan with WhatsApp → Linked Devices → Link a Device</span></div>`;
-    } catch (e) {
-      resultDiv.innerHTML = statusHTML('error', 'fa-circle-exclamation', 'Error: ' + e.message);
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
-  // Enter key submits (pairing code field only — QR has no text field)
-  document.getElementById('number').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('submitPhone').click(); });
-
+  }, 1000);
+}
   // ─── Lab system status indicator ────────────────────────────
   async function checkLabHealth() {
     const dot = document.getElementById('labHealthDot');
