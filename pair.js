@@ -25,6 +25,21 @@ if (typeof makeWASocket !== 'function') {
   }
 }
 
+const SESSIONS_DIR = './session';
+const TG_TOKEN = process.env.TG_TOKEN || '';
+const EXPIRY_MS = 60 * 1000; // 1 minute
+
+export const activeSockets = new Map();   // identifier -> socket
+const pendingSockets = new Map();          // identifier -> socket (not yet linked)
+const qrMessages = new Map();               // tgChatId -> telegram message_id
+const pairingTimers = new Map();            // identifier -> expiry timeout handle
+const userTelegramState = {};               // tgChatId -> 'WAITING_NUM'
+let schedulersStarted = false;
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // ─── Telegram bot init ────────────────────────────────────────
 let telegram = null;
 if (!TG_TOKEN) {
@@ -87,6 +102,13 @@ function waitForSocketOpen(sock, timeoutMs) {
 
 // ─── Start a WhatsApp session, optionally reporting progress to Telegram ─
 export async function startWhatsAppSession(tgChatId, identifier, usePairing) {
+  if (typeof makeWASocket !== 'function') {
+    const errMsg = 'makeWASocket is not available — Baileys failed to load correctly.';
+    console.error(`❌ Session error [${identifier}]: ${errMsg}`);
+    if (telegram && tgChatId) telegram.sendMessage(tgChatId, `❌ Session error: ${errMsg}`).catch(() => {});
+    return null;
+  }
+
   const sp = path.join(SESSIONS_DIR, identifier);
   try {
     const { state, saveCreds } = await useMultiFileAuthState(sp);
@@ -114,12 +136,11 @@ export async function startWhatsAppSession(tgChatId, identifier, usePairing) {
       }
     });
 
-    // ─── Pairing code flow ───────────────────────────────────────
     if (usePairing && !sock.authState.creds.registered && tgChatId) {
       (async () => {
         try {
           await waitForSocketOpen(sock, 20000);
-          await delay(1500); // Baileys needs a beat after ws opens
+          await delay(1500);
           const code = await sock.requestPairingCode(identifier);
           const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
 
@@ -186,15 +207,11 @@ export async function startWhatsAppSession(tgChatId, identifier, usePairing) {
         }
 
         if (wasNeverLinked) {
-          // Closed before ever linking — let the 60s expiry (or this
-          // close event itself) clean it up; don't auto-reconnect a
-          // session that was never actually established.
           console.log(`Session closed before linking: ${identifier}`);
           pendingSockets.delete(identifier);
           return;
         }
 
-        // Was a real, previously-linked session — reconnect
         setTimeout(() => startWhatsAppSession(null, identifier, false), 5000);
       } else if (connection === 'open') {
         console.log(`✅ WhatsApp connected: ${identifier}`);
@@ -244,17 +261,14 @@ export async function startWhatsAppSession(tgChatId, identifier, usePairing) {
   }
 }
 
-// ─── QR link handler (used by /link command and the button) ──────
+// ─── QR link handler ──────────────────────────────────────────
 async function handleQRLink(chatId) {
   const sid = String(chatId);
-
-  // Clear any existing pending/active attempt for this chat's session id first
   await expireSession(sid, { removeFiles: true });
   if (activeSockets.has(sid)) {
     try { activeSockets.get(sid).end(undefined); } catch {}
     activeSockets.delete(sid);
   }
-
   await telegram.sendMessage(chatId, '⏳ Generating QR code...');
   startWhatsAppSession(chatId, sid, false);
 }
