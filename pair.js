@@ -4,30 +4,25 @@ import fs from 'fs-extra';
 import pino from 'pino';
 import QRCode from 'qrcode';
 import TelegramBot from 'node-telegram-bot-api';
-import {
-  default as makeWASocket,
-  useMultiFileAuthState,
-  DisconnectReason,
-  Browsers,
-  fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore
-} from '@whiskeysockets/baileys';
+import * as baileysNS from '@whiskeysockets/baileys';
 import botModule from './bot.js';
 import { BOT_NAME_PLAIN, CONTACT_LINK } from './bot.js';
 
-const SESSIONS_DIR = './session';
-const TG_TOKEN = process.env.TG_TOKEN || '';
-const EXPIRY_MS = 60 * 1000; // 1 minute — matches WhatsApp's own code/QR lifetime
+// ─── Resolve Baileys exports safely across versions ──────────────
+const makeWASocket = baileysNS.makeWASocket || baileysNS.default;
+const useMultiFileAuthState = baileysNS.useMultiFileAuthState || baileysNS.default?.useMultiFileAuthState;
+const DisconnectReason = baileysNS.DisconnectReason || baileysNS.default?.DisconnectReason;
+const Browsers = baileysNS.Browsers || baileysNS.default?.Browsers;
+const fetchLatestBaileysVersion = baileysNS.fetchLatestBaileysVersion || baileysNS.default?.fetchLatestBaileysVersion;
+const makeCacheableSignalKeyStore = baileysNS.makeCacheableSignalKeyStore || baileysNS.default?.makeCacheableSignalKeyStore;
 
-export const activeSockets = new Map();   // identifier -> socket
-const pendingSockets = new Map();          // identifier -> socket (not yet linked)
-const qrMessages = new Map();               // tgChatId -> telegram message_id
-const pairingTimers = new Map();            // identifier -> expiry timeout handle
-const userTelegramState = {};               // tgChatId -> 'WAITING_NUM'
-let schedulersStarted = false;
-
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+if (typeof makeWASocket !== 'function') {
+  console.error('❌ FATAL: makeWASocket could not be resolved from @whiskeysockets/baileys.');
+  console.error('Top-level exports:', Object.keys(baileysNS));
+  if (baileysNS.default) {
+    console.error('Default export type:', typeof baileysNS.default);
+    if (typeof baileysNS.default === 'object') console.error('Default export keys:', Object.keys(baileysNS.default));
+  }
 }
 
 // ─── Telegram bot init ────────────────────────────────────────
