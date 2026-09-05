@@ -8,7 +8,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
 
-import { EmpirePair, EmpirePairQR, EmpirePairStatus, activeSockets, autoResumeSessions } from './pair.js';
+import { activeSockets, autoResumeSessions } from './pair.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,18 +23,10 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use('/public', express.static(path.join(__dirname, 'public')));
-
+// ─── Health & active sessions (kept for Render's health checks) ─
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'main.html'));
+  res.json({ status: 'online', bot: 'StudyMate AI', school: "St Mary's High", pairing: 'via Telegram — message the bot with /start' });
 });
-
-// ─── Pairing routes ────────────────────────────────────────────
-app.get('/code', EmpirePair);              // needs ?number=
-app.get('/pair-qr', EmpirePairQR);         // no params needed
-app.get('/pair-status', EmpirePairStatus); // optional polling
-
-// ─── Health & active sessions ──────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ status: 'online', bot: 'StudyMate AI', school: "St Mary's High" });
 });
@@ -42,7 +34,7 @@ app.get('/active', (req, res) => {
   res.json({ count: activeSockets.size, active: Array.from(activeSockets.keys()) });
 });
 
-// ─── Lab feature health check ───────────────────────────────────
+// ─── Lab feature health check (unchanged) ────────────────────────
 let labHealthCache = { checkedAt: 0, data: null };
 const LAB_HEALTH_TTL_MS = 60000;
 
@@ -87,13 +79,12 @@ app.get('/lab-health', async (req, res) => {
   res.json({ ...result, cached: false });
 });
 
-// ─── Start the bot (resume existing sessions) ──────────────────
+// ─── Start the bot (resume existing sessions + start Telegram) ──
 autoResumeSessions().catch(e => {
   console.error('Fatal error:', e.message);
   process.exit(1);
 });
 
-// ─── Process-level safety nets (prevents silent crashes in prod) ─
 process.on('unhandledRejection', (reason) => {
   console.error('⚠️ Unhandled Rejection:', reason);
 });
@@ -102,10 +93,8 @@ process.on('uncaughtException', (err) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n✅ Server running on http://localhost:${PORT}`);
-  console.log(`🔗 Pair (code): http://localhost:${PORT}/code?number=YOUR_NUMBER`);
-  console.log(`🔗 Pair (QR):   http://localhost:${PORT}/pair-qr`);
-  console.log(`🧪 Lab health:  http://localhost:${PORT}/lab-health\n`);
+  console.log(`\n✅ Server running on port ${PORT}`);
+  console.log(`📱 Pair WhatsApp by messaging your Telegram bot with /start\n`);
 });
 
 export default app;
