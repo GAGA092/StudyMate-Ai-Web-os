@@ -137,32 +137,40 @@ export async function startWhatsAppSession(tgChatId, identifier, usePairing) {
     });
 
     if (usePairing && !sock.authState.creds.registered && tgChatId) {
-      (async () => {
-        try {
-          await waitForSocketOpen(sock, 20000);
-          await delay(1500);
-          const code = await sock.requestPairingCode(identifier);
-          const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
+  (async () => {
+    const maxAttempts = 8;
+    let lastError = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      await delay(attempt === 1 ? 3000 : 2000); // give the socket time to initialize before first try
+      try {
+        const code = await sock.requestPairingCode(identifier);
+        const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
 
-          if (telegram) {
-            await telegram.sendMessage(
-              tgChatId,
-              `🔑 *Pairing Code:*\n\`${formatted}\`\n\n📱 In WhatsApp: Settings → Linked Devices → Link with phone number → enter this code.\n\n⏰ Expires in 60 seconds.`,
-              { parse_mode: 'Markdown' }
-            );
-          }
-
-          const timer = setTimeout(() => expireSession(identifier, { removeFiles: true, notifyChatId: tgChatId }), EXPIRY_MS);
-          pairingTimers.set(identifier, timer);
-        } catch (e) {
-          console.error(`Failed to get pairing code for ${identifier}: ${e.message}`);
-          if (telegram && tgChatId) {
-            telegram.sendMessage(tgChatId, `❌ Failed to generate pairing code: ${e.message}\n\nTry /link for a QR code instead.`).catch(() => {});
-          }
-          pendingSockets.delete(identifier);
+        if (telegram) {
+          await telegram.sendMessage(
+            tgChatId,
+            `🔑 *Pairing Code:*\n\`${formatted}\`\n\n📱 In WhatsApp: Settings → Linked Devices → Link with phone number → enter this code.\n\n⏰ Expires in 60 seconds.`,
+            { parse_mode: 'Markdown' }
+          );
         }
-      })();
+
+        const timer = setTimeout(() => expireSession(identifier, { removeFiles: true, notifyChatId: tgChatId }), EXPIRY_MS);
+        pairingTimers.set(identifier, timer);
+        return; // success — stop retrying
+      } catch (e) {
+        lastError = e;
+        console.error(`Pairing code attempt ${attempt}/${maxAttempts} failed for ${identifier}: ${e.message}`);
+        // If the socket already closed/logged out, no point retrying
+        if (!pendingSockets.has(identifier)) break;
+      }
     }
+    console.error(`Failed to get pairing code for ${identifier} after ${maxAttempts} attempts: ${lastError?.message}`);
+    if (telegram && tgChatId) {
+      telegram.sendMessage(tgChatId, `❌ Failed to generate pairing code after several attempts: ${lastError?.message || 'unknown error'}\n\nTry /link for a QR code instead.`).catch(() => {});
+    }
+    pendingSockets.delete(identifier);
+  })();
+}
 
     sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;
